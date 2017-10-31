@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Codelens
+Bundle-SymbolicName: org.eclipse.jface.text.codelens
+Bundle-Version: 1.0.0.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Export-Package: org.eclipse.jface.text.codelens
+Require-Bundle: org.eclipse.jface.text,
+ org.eclipse.core.runtime
