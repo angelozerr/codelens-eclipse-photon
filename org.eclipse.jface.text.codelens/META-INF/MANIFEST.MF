@@ -6,4 +6,5 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: org.eclipse.jface.text.codelens
 Require-Bundle: org.eclipse.jface.text,
- org.eclipse.core.runtime
+ org.eclipse.core.runtime,
+ org.eclipse.swt

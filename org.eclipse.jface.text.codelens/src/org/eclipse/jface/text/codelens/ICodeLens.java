@@ -10,6 +10,13 @@
  */
 package org.eclipse.jface.text.codelens;
 
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.Position;
+
 public interface ICodeLens {
 
+	Position getPosition(IDocument document) throws BadLocationException;
+
+	Command getCommand();
 }

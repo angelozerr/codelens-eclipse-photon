@@ -1,7 +1,12 @@
 package org.eclipse.ui.texteditor.codelens;
 
+import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.codelens.CodeLensManager;
+import org.eclipse.jface.text.codelens.ICodeLensProvider;
+import org.eclipse.jface.text.source.AnnotationModel;
+import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -12,18 +17,20 @@ public class CodeLensDemo {
 		Display display = new Display();
 		Shell shell = new Shell(display);
 		shell.setLayout(new FillLayout());
-		shell.setText("Line spacing provider in action");
+		shell.setText("CodeLens demo");
 
-		StyledText text = new StyledText(shell, SWT.BORDER | SWT.V_SCROLL);
-		text.setText("// Type your custom line spacing \n10\n5\nabcd\n20\nefgh");
+		ISourceViewer sourceViewer = new SourceViewer(shell, null, SWT.V_SCROLL | SWT.BORDER);
+		String delim = sourceViewer.getTextWidget().getLineDelimiter();
+		sourceViewer.setDocument(new Document(delim + "class A" + delim + "new A" + delim + "new A" + delim + "class B"
+				+ delim + "new B" + delim + "interface I" + delim + "class C implements I"), new AnnotationModel());
 
-		text.setLineSpacingProvider(lineIndex -> {
-			String line = text.getLine(lineIndex).trim();
-			try {
-				return Integer.parseInt(line);
-			} catch(NumberFormatException e) {
-				return null;
-			}
+		CodeLensManager manager = new CodeLensManager();
+		manager.install(sourceViewer, new ICodeLensProvider[] { new ClassReferencesCodeLensProvider(),
+				new ClassImplementationsCodeLensProvider() });
+		manager.refresh();
+
+		sourceViewer.getTextWidget().addModifyListener(e -> {
+			manager.refresh();
 		});
 
 		shell.pack();

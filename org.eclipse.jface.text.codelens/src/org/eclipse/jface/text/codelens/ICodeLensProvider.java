@@ -10,7 +10,7 @@
  */
 package org.eclipse.jface.text.codelens;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -36,7 +36,7 @@ public interface ICodeLensProvider {
 	 *         of a result can be signaled by returning `undefined`, `null`, or an
 	 *         empty array.
 	 */
-	CompletableFuture<Collection<ICodeLens>> provideCodeLenses(ITextViewer viewer, IProgressMonitor monitor);
+	CompletableFuture<List<? extends ICodeLens>> provideCodeLenses(ITextViewer viewer, IProgressMonitor monitor);
 
 	/**
 	 * This function will be called for each visible code lens, usually when

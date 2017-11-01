@@ -8,4 +8,5 @@ Export-Package: org.eclipse.ui.texteditor.codelens
 Require-Bundle: org.eclipse.jface.text,
  org.eclipse.core.runtime,
  org.eclipse.jface.text.codelens,
- org.eclipse.swt
+ org.eclipse.swt,
+ org.eclipse.jface;bundle-version="3.14.0"
