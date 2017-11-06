@@ -6,11 +6,14 @@ import org.eclipse.jface.text.Position;
 
 public abstract class AbstractCodeLens implements ICodeLens {
 
+	private final ICodeLensProvider provider;
+	
 	private int afterLineNumber;
 	private Command command;
 
-	public AbstractCodeLens(int afterLineNumber) {
+	public AbstractCodeLens(int afterLineNumber, ICodeLensProvider provider) {
 		this.afterLineNumber = afterLineNumber;
+		this.provider = provider;
 	}
 
 	@Override
@@ -25,6 +28,11 @@ public abstract class AbstractCodeLens implements ICodeLens {
 
 	public void setCommand(Command command) {
 		this.command = command;
+	}
+	
+	@Override
+	public ICodeLensProvider getProvider() {
+		return provider;
 	}
 
 }

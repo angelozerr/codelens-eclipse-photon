@@ -19,4 +19,7 @@ public interface ICodeLens {
 	Position getPosition(IDocument document) throws BadLocationException;
 
 	Command getCommand();
+	
+	ICodeLensProvider getProvider();
+	
 }

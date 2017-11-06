@@ -34,7 +34,7 @@ public class ClassImplementationsCodeLensProvider extends AbstractSyncCodeLensPr
 				className = className.substring(0, index);
 			}
 			if (className.length() > 0) {
-				lenses.add(new ClassCodeLens(className, lineIndex + 1));
+				lenses.add(new ClassCodeLens(className, lineIndex + 1, this));
 			}
 		}
 	}

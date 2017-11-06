@@ -12,6 +12,11 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
 	@Override
 	public void draw(Annotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
+		if (!(annotation instanceof CodeLensAnnotation)) {
+			return;
+		}
+		CodeLensAnnotation ann = (CodeLensAnnotation) annotation;
+		
 		System.err.println(annotation.getText());
 		if (true) return;
 		int lineIndex = textWidget.getLineAtOffset(offset);
