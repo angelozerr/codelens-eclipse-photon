@@ -4,7 +4,7 @@ Bundle-Name: Codelens
 Bundle-SymbolicName: org.eclipse.jface.text.codelens.samples
 Bundle-Version: 1.0.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: org.eclipse.ui.texteditor.codelens
+Export-Package: org.eclipse.jface.text.codelens.samples
 Require-Bundle: org.eclipse.jface.text,
  org.eclipse.core.runtime,
  org.eclipse.jface.text.codelens,

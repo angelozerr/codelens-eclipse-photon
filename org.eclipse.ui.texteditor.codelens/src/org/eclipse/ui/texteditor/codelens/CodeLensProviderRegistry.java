@@ -49,7 +49,7 @@ public class CodeLensProviderRegistry {
 		}
 
 		@Override
-		public CompletableFuture<Collection<ICodeLens>> provideCodeLenses(ITextViewer viewer,
+		public CompletableFuture<List<? extends ICodeLens>> provideCodeLenses(ITextViewer viewer,
 				IProgressMonitor monitor) {
 			if (!isEnabled())
 				return null;

@@ -16,24 +16,24 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			return;
 		}
 		CodeLensAnnotation ann = (CodeLensAnnotation) annotation;
-		
-		System.err.println(annotation.getText());
-		if (true) return;
 		int lineIndex = textWidget.getLineAtOffset(offset);
 		int lineOffset = textWidget.getOffsetAtLine(lineIndex);
-		int nextOffset = textWidget.getOffsetAtLine(lineIndex + 1) - 1;
+		// int nextOffset = textWidget.getOffsetAtLine(lineIndex + 1) - 1;
 		length = 1;
 		if (gc != null) {
 
-   			if (length < 1)
+			if (length < 1)
 				return;
 
-			Point left = textWidget.getLocationAtOffset(lineOffset);
-			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-			gc.drawText(annotation.getText(), left.x, left.y + 20);
+			for (ICodeLens codeLens : ann.getLenses()) {
+
+				Point left = textWidget.getLocationAtOffset(lineOffset);
+				gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+				gc.drawText(codeLens.getCommand().getTitle(), left.x, left.y + 20);
+			}
 
 		} else {
-			textWidget.redrawRange(nextOffset, length, true);
+			textWidget.redrawRange(lineOffset, length, true);
 		}
 	}
 
