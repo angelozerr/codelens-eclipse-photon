@@ -20,7 +20,7 @@ import org.eclipse.jface.text.source.Annotation;
  *
  */
 public class CodeLensAnnotation extends Annotation {
-	
+
 	/**
 	 * The type of codelens annotations.
 	 */
@@ -33,17 +33,17 @@ public class CodeLensAnnotation extends Annotation {
 		this.lenses = new ArrayList<>();
 	}
 
-	public void addCodeLens(ICodeLens codeLens) {
-		lenses.clear();
-		lenses.add(codeLens);
-	}
-
 	public List<ICodeLens> getLenses() {
 		return lenses;
 	}
 
 	public int getHeight() {
 		return 20;
+	}
+
+	public void setCodeLenses(List<ICodeLens> lenses) {
+		this.lenses.clear();
+		this.lenses.addAll(lenses);
 	}
 
 }

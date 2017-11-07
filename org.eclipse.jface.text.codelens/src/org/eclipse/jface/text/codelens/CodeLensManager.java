@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.Assert;
@@ -62,7 +61,7 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	/**
 	 * Holds the current color symbol annotations.
 	 */
-	private List<Annotation> colorSymbolAnnotations = null;
+	private List<CodeLensAnnotation> codeLensAnnotations = null;
 
 	private ISourceViewer viewer;
 	private AnnotationPainter painter;
@@ -115,10 +114,10 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 		// Collect the lenses for the viewer
 		codeLensRequest = getCodeLenses(viewer, codeLensProviders, monitor);
 		codeLensRequest.thenAccept(symbols -> {
-			// then, sort lenses by lineNumber and provider-rank if
-			sort(symbols, codeLensProviders);
+			// then group lenses by lines
+			List<List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
 			// resolve and render lenses
-			renderCodeLenses(symbols, viewer, monitor);
+			renderCodeLenses(groups, viewer, monitor);
 		});
 	}
 
@@ -160,11 +159,13 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 
 	/**
 	 * 
-	 * @param symbols
+	 * @param lenses
 	 * @param providers
 	 */
-	private static void sort(List<? extends ICodeLens> symbols, List<ICodeLensProvider> providers) {
-		Collections.sort(symbols, (a, b) -> {
+	private static List<List<ICodeLens>> goupByLines(List<? extends ICodeLens> lenses,
+			List<ICodeLensProvider> providers) {
+		// sort lenses by lineNumber and provider-rank if
+		Collections.sort(lenses, (a, b) -> {
 			if (a.getPosition().offset < b.getPosition().offset) {
 				return -1;
 			} else if (a.getPosition().offset > b.getPosition().offset) {
@@ -183,17 +184,29 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				return 0;
 			}
 		});
+		List<List<ICodeLens>> groups = new ArrayList<>();
+		List<ICodeLens> lastGroup = null;
+		int offset = -1;
+		for (ICodeLens lens : lenses) {
+			if (offset != lens.getPosition().offset) {
+				lastGroup = new ArrayList<>();
+				groups.add(lastGroup);
+			}
+			lastGroup.add(lens);
+			offset = lens.getPosition().offset;
+		}
+		return groups;
 	}
 
 	// --------------- CodeLens renderer methods utilities
 
 	/**
 	 * 
-	 * @param symbols
+	 * @param groups
 	 * @param viewer
 	 * @param monitor
 	 */
-	private void renderCodeLenses(List<? extends ICodeLens> symbols, ISourceViewer viewer, IProgressMonitor monitor) {
+	private void renderCodeLenses(List<List<ICodeLens>> groups, ISourceViewer viewer, IProgressMonitor monitor) {
 		if (monitor.isCanceled()) {
 			return;
 		}
@@ -205,21 +218,12 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
 		Map<Annotation, Position> annotationsToAdd = new HashMap<>();
 		// Initialize annotations to delete with last annotations
-		List<Annotation> annotationsToRemove = colorSymbolAnnotations != null ? new ArrayList<>(colorSymbolAnnotations)
+		List<Annotation> annotationsToRemove = codeLensAnnotations != null ? new ArrayList<>(codeLensAnnotations)
 				: Collections.emptyList();
-		List<Annotation> currentAnnotations = new ArrayList<>();
-		// Loop for codelens
-		for (ICodeLens codeLens : symbols) {
-			try {
-				codeLens.getProvider().resolveCodeLens(viewer, codeLens, monitor).get();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			Position pos = codeLens.getPosition();
+		List<CodeLensAnnotation> currentAnnotations = new ArrayList<>();
+		// Loop for grouped lenses
+		for (List<ICodeLens> lenses : groups) {
+			Position pos = lenses.get(0).getPosition();
 			// Try to find existing annotation
 			CodeLensAnnotation ann = findExistingAnnotation(pos, annotationModel);
 			if (ann == null) {
@@ -230,32 +234,48 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				// The annotation exists, remove it from the list to delete.
 				annotationsToRemove.remove(ann);
 			}
-			ann.addCodeLens(codeLens);
+			ann.setCodeLenses(lenses);
 			currentAnnotations.add(ann);
 		}
 
 		synchronized (getLockObject(annotationModel)) {
-			colorSymbolAnnotations = currentAnnotations;
+			codeLensAnnotations = currentAnnotations;
 			if (annotationsToAdd.size() == 0 && annotationsToRemove.size() == 0) {
 				// None change, do nothing. Here the user could change position of codelens
 				// range
 				// (ex: user key press
 				// "Enter"), but we don't need to redraw the viewer because change of position
 				// is done by AnnotationPainter.
-				return;
-			}
-			if (annotationModel instanceof IAnnotationModelExtension) {
-				((IAnnotationModelExtension) annotationModel).replaceAnnotations(
-						annotationsToRemove.toArray(new Annotation[annotationsToRemove.size()]), annotationsToAdd);
+
 			} else {
-				removeColorSymbolAnnotations();
-				Iterator<Entry<Annotation, Position>> iter = annotationsToAdd.entrySet().iterator();
-				while (iter.hasNext()) {
-					Entry<Annotation, Position> mapEntry = iter.next();
-					annotationModel.addAnnotation(mapEntry.getKey(), mapEntry.getValue());
+				if (annotationModel instanceof IAnnotationModelExtension) {
+					((IAnnotationModelExtension) annotationModel).replaceAnnotations(
+							annotationsToRemove.toArray(new Annotation[annotationsToRemove.size()]), annotationsToAdd);
+				} else {
+					removeColorSymbolAnnotations();
+					Iterator<Entry<Annotation, Position>> iter = annotationsToAdd.entrySet().iterator();
+					while (iter.hasNext()) {
+						Entry<Annotation, Position> mapEntry = iter.next();
+						annotationModel.addAnnotation(mapEntry.getKey(), mapEntry.getValue());
+					}
 				}
 			}
+			for (CodeLensAnnotation annotation : currentAnnotations) {
+				resolveCodeLens(viewer, annotation.getLenses(), monitor)
+						.thenAccept(lenses -> viewer.getTextWidget().getDisplay().asyncExec(() -> {
+							CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
+									lenses.get(0).getPosition().offset, 1, null);
+						}));
+			}
 		}
+	}
+
+	private static CompletableFuture<List<ICodeLens>> resolveCodeLens(ITextViewer viewer, List<ICodeLens> lenses,
+			IProgressMonitor monitor) {
+		List<CompletableFuture<ICodeLens>> com = lenses.stream()
+				.map(lens -> lens.getProvider().resolveCodeLens(viewer, lens, monitor)).collect(Collectors.toList());
+		return CompletableFuture.allOf(com.toArray(new CompletableFuture[com.size()]))
+				.thenApply(v -> com.stream().map(CompletableFuture::join).collect(Collectors.toList()));
 	}
 
 	/**
@@ -267,10 +287,10 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	 * @return
 	 */
 	private CodeLensAnnotation findExistingAnnotation(Position pos, IAnnotationModel annotationModel) {
-		if (colorSymbolAnnotations == null) {
+		if (codeLensAnnotations == null) {
 			return null;
 		}
-		for (Annotation annotation : colorSymbolAnnotations) {
+		for (Annotation annotation : codeLensAnnotations) {
 			CodeLensAnnotation ann = (CodeLensAnnotation) annotation;
 			Position p = annotationModel.getPosition(annotation);
 			if (p != null && p.offset == pos.offset) {
@@ -344,18 +364,18 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	private void removeColorSymbolAnnotations() {
 
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
-		if (annotationModel == null || colorSymbolAnnotations == null)
+		if (annotationModel == null || codeLensAnnotations == null)
 			return;
 
 		synchronized (getLockObject(annotationModel)) {
 			if (annotationModel instanceof IAnnotationModelExtension) {
 				((IAnnotationModelExtension) annotationModel).replaceAnnotations(
-						colorSymbolAnnotations.toArray(new Annotation[colorSymbolAnnotations.size()]), null);
+						codeLensAnnotations.toArray(new Annotation[codeLensAnnotations.size()]), null);
 			} else {
-				for (Annotation fColorSymbolAnnotation : colorSymbolAnnotations)
+				for (Annotation fColorSymbolAnnotation : codeLensAnnotations)
 					annotationModel.removeAnnotation(fColorSymbolAnnotation);
 			}
-			colorSymbolAnnotations = null;
+			codeLensAnnotations = null;
 		}
 	}
 

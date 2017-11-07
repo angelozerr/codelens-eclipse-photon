@@ -32,7 +32,10 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		if (!(annotation instanceof CodeLensAnnotation)) {
 			return;
 		}
-		CodeLensAnnotation ann = (CodeLensAnnotation) annotation;
+		CodeLensDrawingStrategy.draw((CodeLensAnnotation)annotation, gc, textWidget, offset, length, color);
+	}
+
+	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
 		int lineIndex = textWidget.getLineAtOffset(offset);
 		int nextLineIndex = lineIndex + 1;
 		if (nextLineIndex >= textWidget.getLineCount()) {
@@ -44,9 +47,9 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			nextOffset = nextOffset + getLeadingSpaces(textWidget.getLine(nextLineIndex));
 			Point left = textWidget.getLocationAtOffset(nextOffset);
 			// Loop for codelens and render it
-			String text = getText(new ArrayList<>(ann.getLenses()));
+			String text = getText(new ArrayList<>(annotation.getLenses()));
 			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-			gc.drawText(text, left.x, left.y - ann.getHeight());
+			gc.drawText(text, left.x, left.y - annotation.getHeight());
 		} else {
 			// Refresh the full line where CodeLens annotation must be drawn in the line
 			// spacing
@@ -54,14 +57,15 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			textWidget.redrawRange(offset, lineLength, true);
 		}
 	}
-
-	private String getText(List<ICodeLens> lenses) {
+	
+	private static String getText(List<ICodeLens> lenses) {
 		StringBuilder text = new StringBuilder();
 		for (ICodeLens codeLens : lenses) {
 			if (text.length() > 0) {
 				text.append(" | ");
 			}
-			text.append(codeLens.getCommand().getTitle());
+			String title = codeLens.getCommand() != null ? codeLens.getCommand().getTitle() : "no command";
+			text.append(title);
 		}
 		return text.toString();
 	}
