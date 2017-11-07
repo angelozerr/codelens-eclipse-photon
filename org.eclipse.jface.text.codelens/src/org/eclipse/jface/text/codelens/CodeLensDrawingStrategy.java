@@ -10,6 +10,9 @@
  */
 package org.eclipse.jface.text.codelens;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy;
 import org.eclipse.swt.SWT;
@@ -20,7 +23,7 @@ import org.eclipse.swt.graphics.Point;
 
 /**
  * {@link IDrawingStrategy} implementation to render {@link CodeLensAnnotation}
- * which are composed with list of {@link ICodeLens}.
+ * composed with list of {@link ICodeLens} for a given line.
  */
 public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
@@ -31,36 +34,50 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		}
 		CodeLensAnnotation ann = (CodeLensAnnotation) annotation;
 		int lineIndex = textWidget.getLineAtOffset(offset);
+		int nextLineIndex = lineIndex + 1;
+		if (nextLineIndex >= textWidget.getLineCount()) {
+			return;
+		}
+		int nextOffset = textWidget.getOffsetAtLine(nextLineIndex);
 		if (gc != null) {
+			// adjust offset with leading spaces of the next line
+			nextOffset = nextOffset + getLeadingSpaces(textWidget.getLine(nextLineIndex));
+			Point left = textWidget.getLocationAtOffset(nextOffset);
 			// Loop for codelens and render it
-			for (ICodeLens codeLens : ann.getLenses()) {
-				Point left = textWidget.getLocationAtOffset(offset);
-				gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-				gc.drawText(codeLens.getCommand().getTitle(), left.x, left.y + 20);
-			}
+			String text = getText(new ArrayList<>(ann.getLenses()));
+			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+			gc.drawText(text, left.x, left.y - ann.getHeight());
 		} else {
 			// Refresh the full line where CodeLens annotation must be drawn in the line
 			// spacing
-			int lineLength = getNextOffset(lineIndex, textWidget) - offset;
+			int lineLength = nextOffset - offset;
 			textWidget.redrawRange(offset, lineLength, true);
 		}
 	}
 
-	/**
-	 * Returns the next offset of the given line idenx.
-	 * 
-	 * @param lineIndex
-	 *            the line index
-	 * @param textWidget
-	 *            the text widget
-	 * @return the next offset of the given line idenx.
-	 */
-	private int getNextOffset(int lineIndex, StyledText textWidget) {
-		int nextLineIndex = lineIndex + 1;
-		if (nextLineIndex >= textWidget.getLineCount()) {
-			return textWidget.getCharCount();
+	private String getText(List<ICodeLens> lenses) {
+		StringBuilder text = new StringBuilder();
+		for (ICodeLens codeLens : lenses) {
+			if (text.length() > 0) {
+				text.append(" | ");
+			}
+			text.append(codeLens.getCommand().getTitle());
 		}
-		return textWidget.getOffsetAtLine(nextLineIndex);
+		return text.toString();
+	}
+
+	private static int getLeadingSpaces(String line) {
+		int counter = 0;
+		char[] chars = line.toCharArray();
+		for (char c : chars) {
+			if (c == '\t')
+				counter++;
+			else if (c == ' ')
+				counter++;
+			else
+				break;
+		}
+		return counter;
 	}
 
 }
