@@ -61,6 +61,10 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 	private static String getText(List<ICodeLens> lenses) {
 		StringBuilder text = new StringBuilder();
 		for (ICodeLens codeLens : lenses) {
+			if (!codeLens.isResolved()) {
+				// Don't render codelens which is not resolved.
+				continue;
+			}
 			if (text.length() > 0) {
 				text.append(" | ");
 			}
