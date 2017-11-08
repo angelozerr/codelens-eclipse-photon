@@ -114,8 +114,8 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 		// Collect the lenses for the viewer
 		codeLensRequest = getCodeLenses(viewer, codeLensProviders, monitor);
 		codeLensRequest.thenAccept(symbols -> {
-			// then group lenses by lines
-			List<List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
+			// then group lenses by lines position
+			Map<Position, List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
 			// resolve and render lenses
 			renderCodeLenses(groups, viewer, monitor);
 		});
@@ -162,7 +162,7 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	 * @param lenses
 	 * @param providers
 	 */
-	private static List<List<ICodeLens>> goupByLines(List<? extends ICodeLens> lenses,
+	private static Map<Position, List<ICodeLens>> goupByLines(List<? extends ICodeLens> lenses,
 			List<ICodeLensProvider> providers) {
 		// sort lenses by lineNumber and provider-rank if
 		Collections.sort(lenses, (a, b) -> {
@@ -170,9 +170,9 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				return -1;
 			} else if (a.getPosition().offset > b.getPosition().offset) {
 				return 1;
-			} else if (providers.indexOf(a.getProvider()) < providers.indexOf(b.getProvider())) {
+			} else if (providers.indexOf(a.getResolver()) < providers.indexOf(b.getResolver())) {
 				return -1;
-			} else if (providers.indexOf(a.getProvider()) > providers.indexOf(b.getProvider())) {
+			} else if (providers.indexOf(a.getResolver()) > providers.indexOf(b.getResolver())) {
 				return 1;
 			}
 			/*
@@ -184,18 +184,21 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				return 0;
 			}
 		});
-		List<List<ICodeLens>> groups = new ArrayList<>();
-		List<ICodeLens> lastGroup = null;
-		int offset = -1;
-		for (ICodeLens lens : lenses) {
-			if (offset != lens.getPosition().offset) {
-				lastGroup = new ArrayList<>();
-				groups.add(lastGroup);
-			}
-			lastGroup.add(lens);
-			offset = lens.getPosition().offset;
-		}
-		return groups;
+
+		return lenses.stream().collect(Collectors.groupingBy(ICodeLens::getPosition));
+
+		// List<List<ICodeLens>> groups = new ArrayList<>();
+		// List<ICodeLens> lastGroup = null;
+		// int offset = -1;
+		// for (ICodeLens lens : lenses) {
+		// if (offset != lens.getPosition().offset) {
+		// lastGroup = new ArrayList<>();
+		// groups.add(lastGroup);
+		// }
+		// lastGroup.add(lens);
+		// offset = lens.getPosition().offset;
+		// }
+		// return groups;
 	}
 
 	// --------------- CodeLens renderer methods utilities
@@ -206,7 +209,8 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	 * @param viewer
 	 * @param monitor
 	 */
-	private void renderCodeLenses(List<List<ICodeLens>> groups, ISourceViewer viewer, IProgressMonitor monitor) {
+	private void renderCodeLenses(Map<Position, List<ICodeLens>> groups, ISourceViewer viewer,
+			IProgressMonitor monitor) {
 		if (monitor.isCanceled()) {
 			return;
 		}
@@ -222,8 +226,10 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				: Collections.emptyList();
 		List<CodeLensAnnotation> currentAnnotations = new ArrayList<>();
 		// Loop for grouped lenses
-		for (List<ICodeLens> lenses : groups) {
-			Position pos = lenses.get(0).getPosition();
+		groups.entrySet().stream().forEach(g -> {
+			Position pos = g.getKey();
+			List<ICodeLens> lenses = g.getValue();
+
 			// Try to find existing annotation
 			CodeLensAnnotation ann = findExistingAnnotation(pos, annotationModel);
 			if (ann == null) {
@@ -236,7 +242,7 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 			}
 			ann.setCodeLenses(lenses);
 			currentAnnotations.add(ann);
-		}
+		});
 
 		synchronized (getLockObject(annotationModel)) {
 			codeLensAnnotations = currentAnnotations;
@@ -273,7 +279,7 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	private static CompletableFuture<List<ICodeLens>> resolveCodeLens(ITextViewer viewer, List<ICodeLens> lenses,
 			IProgressMonitor monitor) {
 		List<CompletableFuture<ICodeLens>> com = lenses.stream()
-				.map(lens -> lens.getProvider().resolveCodeLens(viewer, lens, monitor)).collect(Collectors.toList());
+				.map(lens -> lens.getResolver().resolveCodeLens(viewer, lens, monitor)).collect(Collectors.toList());
 		return CompletableFuture.allOf(com.toArray(new CompletableFuture[com.size()]))
 				.thenApply(v -> com.stream().map(CompletableFuture::join).collect(Collectors.toList()));
 	}

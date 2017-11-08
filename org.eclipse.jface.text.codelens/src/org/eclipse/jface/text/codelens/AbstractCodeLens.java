@@ -21,13 +21,17 @@ import org.eclipse.jface.text.Position;
 public abstract class AbstractCodeLens implements ICodeLens {
 
 	private final Position position;
-	private final ICodeLensProvider provider;
+	private final ICodeLensResolver resolver;
 	private Command command;
 
-	public AbstractCodeLens(int afterLineNumber, IDocument document, ICodeLensProvider provider)
+	public AbstractCodeLens(int afterLineNumber, IDocument document) throws BadLocationException {
+		this(afterLineNumber, document, null);
+	}
+
+	public AbstractCodeLens(int afterLineNumber, IDocument document, ICodeLensResolver provider)
 			throws BadLocationException {
 		this.position = create(afterLineNumber, document);
-		this.provider = provider;
+		this.resolver = provider;
 	}
 
 	@Override
@@ -45,13 +49,17 @@ public abstract class AbstractCodeLens implements ICodeLens {
 	}
 
 	@Override
-	public ICodeLensProvider getProvider() {
-		return provider;
+	public ICodeLensResolver getResolver() {
+		return resolver;
+	}
+
+	@Override
+	public boolean isResolved() {
+		return resolver == null || command != null;
 	}
 
 	private static Position create(int afterLineNumber, IDocument document) throws BadLocationException {
 		int offset = document.getLineOffset(afterLineNumber - 1);
 		return new Position(offset, 1);
 	}
-
 }

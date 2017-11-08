@@ -12,12 +12,24 @@ package org.eclipse.jface.text.codelens;
 
 import org.eclipse.jface.text.Position;
 
+/**
+ * CodeLens API
+ *
+ */
 public interface ICodeLens {
 
+	/**
+	 * Returns the line position where code lens must be displayed in the line
+	 * spacing area.
+	 * 
+	 * @return the line position where code lens must be displayed in the line
+	 *         spacing area.
+	 */
 	Position getPosition();
 
 	Command getCommand();
 
-	ICodeLensProvider getProvider();
+	ICodeLensResolver getResolver();
 
+	boolean isResolved();
 }

@@ -14,6 +14,7 @@ import org.eclipse.swt.widgets.Shell;
 public class CodeLensDemo {
 
 	public static void main(String[] args) throws Exception {
+		
 		Display display = new Display();
 		Shell shell = new Shell(display);
 		shell.setLayout(new FillLayout());

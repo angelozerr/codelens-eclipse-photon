@@ -11,7 +11,6 @@
 package org.eclipse.ui.texteditor.codelens;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -24,27 +23,28 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.codelens.AbstractCodeLensProvider;
 import org.eclipse.jface.text.codelens.ICodeLens;
 import org.eclipse.jface.text.codelens.ICodeLensProvider;
+import org.eclipse.jface.text.codelens.ICodeLensResolver;
 
 public class CodeLensProviderRegistry {
 
 	/**
 	 * Delegate for contributed codelens provider.
 	 */
-	private class CodeLensProviderDelegate implements ICodeLensProvider {
+	private class CodeLensProviderDelegate implements ICodeLensProvider, ICodeLensResolver {
 
-		private CodeLensProviderDescriptor fHyperlinkDescriptor;
+		private CodeLensProviderDescriptor codeLensProviderDescriptor;
 		private ICodeLensProvider fCodeLensProvider;
-		private boolean fFailedDuringCreation= false;
+		private boolean fFailedDuringCreation = false;
 		private IAdaptable fContext;
 		private int fStateMask;
 		private boolean fIsEnabled;
 
-
 		private CodeLensProviderDelegate(CodeLensProviderDescriptor descriptor) {
-			fHyperlinkDescriptor= descriptor;
+			codeLensProviderDescriptor = descriptor;
 			if (fPreferenceStore != null) {
-				fStateMask= fPreferenceStore.getInt(fHyperlinkDescriptor.getId() /* +  CodeLensProviderDescriptor.STATE_MASK_POSTFIX */);
-				fIsEnabled= !fPreferenceStore.getBoolean(fHyperlinkDescriptor.getId());
+				fStateMask = fPreferenceStore
+						.getInt(codeLensProviderDescriptor.getId() /* + CodeLensProviderDescriptor.STATE_MASK_POSTFIX */);
+				fIsEnabled = !fPreferenceStore.getBoolean(codeLensProviderDescriptor.getId());
 			}
 		}
 
@@ -56,12 +56,12 @@ public class CodeLensProviderRegistry {
 
 			if (!fFailedDuringCreation && fCodeLensProvider == null) {
 				try {
-					fCodeLensProvider= fHyperlinkDescriptor.createCodeLensProviderImplementation();
+					fCodeLensProvider = codeLensProviderDescriptor.createCodeLensProviderImplementation();
 				} catch (CoreException ex) {
-					fFailedDuringCreation= true;
+					fFailedDuringCreation = true;
 				}
 				if (fContext != null && fCodeLensProvider instanceof AbstractCodeLensProvider)
-					((AbstractCodeLensProvider)fCodeLensProvider).setContext(fContext);
+					((AbstractCodeLensProvider) fCodeLensProvider).setContext(fContext);
 			}
 			if (fCodeLensProvider != null)
 				return fCodeLensProvider.provideCodeLenses(viewer, monitor);
@@ -69,7 +69,7 @@ public class CodeLensProviderRegistry {
 			return null;
 
 		}
-		
+
 		@Override
 		public CompletableFuture<ICodeLens> resolveCodeLens(ITextViewer viewer, ICodeLens codeLens,
 				IProgressMonitor monitor) {
@@ -78,15 +78,15 @@ public class CodeLensProviderRegistry {
 
 			if (!fFailedDuringCreation && fCodeLensProvider == null) {
 				try {
-					fCodeLensProvider= fHyperlinkDescriptor.createCodeLensProviderImplementation();
+					fCodeLensProvider = codeLensProviderDescriptor.createCodeLensProviderImplementation();
 				} catch (CoreException ex) {
-					fFailedDuringCreation= true;
+					fFailedDuringCreation = true;
 				}
 				if (fContext != null && fCodeLensProvider instanceof AbstractCodeLensProvider)
-					((AbstractCodeLensProvider)fCodeLensProvider).setContext(fContext);
+					((AbstractCodeLensProvider) fCodeLensProvider).setContext(fContext);
 			}
-			if (fCodeLensProvider != null)
-				return fCodeLensProvider.resolveCodeLens(viewer, codeLens, monitor);
+			if (fCodeLensProvider != null && fCodeLensProvider instanceof ICodeLensResolver)
+				return ((ICodeLensResolver) fCodeLensProvider).resolveCodeLens(viewer, codeLens, monitor);
 
 			return null;
 
@@ -97,30 +97,26 @@ public class CodeLensProviderRegistry {
 		}
 
 		private void setContext(IAdaptable context) {
-			fContext= context;
+			fContext = context;
 		}
 
 		@Override
 		public void dispose() {
-			if (fCodeLensProvider instanceof AbstractCodeLensProvider)
-				((AbstractCodeLensProvider)fCodeLensProvider).dispose();
-
-			fCodeLensProvider= null;
-			fHyperlinkDescriptor= null;
-			fContext= null;
+			fCodeLensProvider.dispose();
+			fCodeLensProvider = null;
+			codeLensProviderDescriptor = null;
+			fContext = null;
 		}
 
-//		@Override
-//		public int getStateMask() {
-//			return fStateMask;
-//		}
+		// @Override
+		// public int getStateMask() {
+		// return fStateMask;
+		// }
 
 	}
 
-
 	private CodeLensProviderDescriptor[] fCodeLensProviderDescriptors;
 	private IPreferenceStore fPreferenceStore;
-
 
 	/**
 	 * Creates a new codelens provider registry.
@@ -129,18 +125,19 @@ public class CodeLensProviderRegistry {
 	}
 
 	/**
-	 * Creates a new codelens provider registry that controls
-	 * codelens enablement via the given preference store.
+	 * Creates a new codelens provider registry that controls codelens enablement
+	 * via the given preference store.
 	 * <p>
-	 * The codelens provider id is used as preference key.
-	 * The value is of type <code>Boolean</code> where
-	 * <code>false</code> means that the codelens provider is active.
+	 * The codelens provider id is used as preference key. The value is of type
+	 * <code>Boolean</code> where <code>false</code> means that the codelens
+	 * provider is active.
 	 * </p>
 	 *
-	 * @param preferenceStore the preference store to be used
+	 * @param preferenceStore
+	 *            the preference store to be used
 	 */
 	public CodeLensProviderRegistry(IPreferenceStore preferenceStore) {
-		fPreferenceStore= preferenceStore;
+		fPreferenceStore = preferenceStore;
 	}
 
 	/**
@@ -150,7 +147,7 @@ public class CodeLensProviderRegistry {
 	 */
 	public synchronized CodeLensProviderDescriptor[] getCodeLensProviderDescriptors() {
 		initCodeLensProviderDescriptors();
-		CodeLensProviderDescriptor[] result= new CodeLensProviderDescriptor[fCodeLensProviderDescriptors.length];
+		CodeLensProviderDescriptor[] result = new CodeLensProviderDescriptor[fCodeLensProviderDescriptors.length];
 		System.arraycopy(fCodeLensProviderDescriptors, 0, result, 0, fCodeLensProviderDescriptors.length);
 		return result;
 	}
@@ -160,17 +157,17 @@ public class CodeLensProviderRegistry {
 	 */
 	private synchronized void initCodeLensProviderDescriptors() {
 		if (fCodeLensProviderDescriptors == null)
-			fCodeLensProviderDescriptors= CodeLensProviderDescriptor.getContributedCodeLensProviders();
+			fCodeLensProviderDescriptors = CodeLensProviderDescriptor.getContributedCodeLensProviders();
 	}
 
 	public ICodeLensProvider[] createCodeLensProviders(String targetId, IAdaptable context) {
 		Assert.isLegal(targetId != null);
 		initCodeLensProviderDescriptors();
 
-		List<CodeLensProviderDelegate> result= new ArrayList<>();
-		for (int i= 0; i < fCodeLensProviderDescriptors.length; i++) {
+		List<CodeLensProviderDelegate> result = new ArrayList<>();
+		for (int i = 0; i < fCodeLensProviderDescriptors.length; i++) {
 			if (targetId.equals(fCodeLensProviderDescriptors[i].getTargetId())) {
-				CodeLensProviderDelegate detector= new CodeLensProviderDelegate(fCodeLensProviderDescriptors[i]);
+				CodeLensProviderDelegate detector = new CodeLensProviderDelegate(fCodeLensProviderDescriptors[i]);
 				result.add(detector);
 				detector.setContext(context);
 			}

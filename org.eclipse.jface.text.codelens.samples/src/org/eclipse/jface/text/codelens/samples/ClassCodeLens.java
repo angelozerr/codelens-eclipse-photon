@@ -3,15 +3,15 @@ package org.eclipse.jface.text.codelens.samples;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.codelens.AbstractCodeLens;
-import org.eclipse.jface.text.codelens.ICodeLensProvider;
+import org.eclipse.jface.text.codelens.ICodeLensResolver;
 
 public class ClassCodeLens extends AbstractCodeLens {
 
 	private final String className;
 
-	public ClassCodeLens(String className, int afterLineNumber, IDocument document, ICodeLensProvider provider)
+	public ClassCodeLens(String className, int afterLineNumber, IDocument document, ICodeLensResolver resolver)
 			throws BadLocationException {
-		super(afterLineNumber, document, provider);
+		super(afterLineNumber, document, resolver);
 		this.className = className;
 	}
 

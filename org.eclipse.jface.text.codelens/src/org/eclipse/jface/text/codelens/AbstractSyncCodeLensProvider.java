@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.ITextViewer;
 
-public abstract class AbstractSyncCodeLensProvider extends AbstractCodeLensProvider {
+public abstract class AbstractSyncCodeLensProvider extends AbstractCodeLensProvider implements ICodeLensResolver {
 
 	@Override
 	public CompletableFuture<List<? extends ICodeLens>> provideCodeLenses(ITextViewer viewer,
