@@ -52,7 +52,7 @@ import org.eclipse.swt.graphics.RGB;
  * CodeLens manager.
  *
  */
-public class CodeLensManager implements StyledTextLineSpacingProvider {
+public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider {
 
 	private static final IDrawingStrategy CODELENS_STRATEGY = new CodeLensDrawingStrategy();
 	private static final Object CODELENS = "codelens";
@@ -102,7 +102,8 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 	/**
 	 * Collect, resolve and render the lenses of the viewer.
 	 */
-	public void refresh() {
+	@Override
+	public void run() {
 		if (viewer == null || codeLensProviders == null || viewer.getAnnotationModel() == null) {
 			return;
 		}
@@ -252,7 +253,6 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 				// (ex: user key press
 				// "Enter"), but we don't need to redraw the viewer because change of position
 				// is done by AnnotationPainter.
-
 			} else {
 				if (annotationModel instanceof IAnnotationModelExtension) {
 					((IAnnotationModelExtension) annotationModel).replaceAnnotations(
@@ -269,8 +269,12 @@ public class CodeLensManager implements StyledTextLineSpacingProvider {
 			for (CodeLensAnnotation annotation : currentAnnotations) {
 				resolveCodeLens(viewer, annotation.getLenses(), monitor)
 						.thenAccept(lenses -> viewer.getTextWidget().getDisplay().asyncExec(() -> {
-							CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
-									lenses.get(0).getPosition().offset, 1, null);
+							if (!annotation.isMarkedDeleted()) {
+								CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
+										lenses.get(0).getPosition().offset, 1, null);
+							} else {
+								System.err.println("Deleted!");
+							}
 						}));
 			}
 		}

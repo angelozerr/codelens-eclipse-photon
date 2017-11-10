@@ -22,18 +22,18 @@ public class CodeLensDemo {
 
 		ISourceViewer sourceViewer = new SourceViewer(shell, null, SWT.V_SCROLL | SWT.BORDER);
 		String delim = sourceViewer.getTextWidget().getLineDelimiter();
-		sourceViewer.setDocument(new Document(delim + "  class A" + delim + "new A" + delim + "new A" + delim + "class B"
-				+ delim + "new B" + delim + "interface I" + delim + "class C implements I"), new AnnotationModel());
+		//sourceViewer.setDocument(new Document(delim + "  class A" + delim + "new A" + delim + "new A" + delim + "class B"
+		//		+ delim + "new B" + delim + "interface I" + delim + "class C implements I"), new AnnotationModel());
 
-		//sourceViewer.setDocument(new Document(delim + "class A"), new AnnotationModel());
+		sourceViewer.setDocument(new Document(delim + "class 1"), new AnnotationModel());
 		
 		CodeLensManager manager = new CodeLensManager();
 		manager.install(sourceViewer, new ICodeLensProvider[] { new ClassReferencesCodeLensProvider()
 				,				new ClassImplementationsCodeLensProvider() });
-		manager.refresh();
+		manager.run();
 
 		sourceViewer.getTextWidget().addModifyListener(e -> {
-			manager.refresh();
+			manager.run();
 		});
 
 		//shell.pack();
