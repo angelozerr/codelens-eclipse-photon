@@ -13,6 +13,8 @@ import org.eclipse.jface.text.codelens.ICodeLens;
 
 public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvider {
 
+	private Object lock = new Object();
+
 	@Override
 	protected List<? extends ICodeLens> provideSyncCodeLenses(ITextViewer viewer, IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
@@ -44,21 +46,25 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 	protected ICodeLens resolveSyncCodeLens(ITextViewer viewer, ICodeLens codeLens, IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
 		String className = ((ClassCodeLens) codeLens).getClassName();
-
 		try {
 			int wait = Integer.parseInt(className);
 			try {
-				synchronized (className) {
-					className.wait(wait * 1000);
+
+				for (int i = 0; i < wait; i++) {
+					if (monitor.isCanceled()) {
+						return null;
+					}
+					synchronized (lock) {
+						lock.wait(1000);
+					}
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+		} catch (Exception e) {
+
 		}
-		catch(Exception e) {
-			
-		}
-		
+
 		int refCount = 0;
 		int lineCount = document.getNumberOfLines();
 		for (int i = 0; i < lineCount; i++) {

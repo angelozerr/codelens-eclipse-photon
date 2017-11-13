@@ -16,15 +16,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPainter;
@@ -68,6 +69,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private List<ICodeLensProvider> codeLensProviders;
 	private IProgressMonitor monitor;
 	private CompletableFuture<List<? extends ICodeLens>> codeLensRequest;
+	private List<CompletableFuture<ICodeLens>> promises;
+	private CompletableFuture<List<ICodeLens>> h;
 
 	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
@@ -109,16 +112,46 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		}
 		initPainterIfNeeded();
 		cancel();
-		if (monitor == null) {
-			monitor = new NullProgressMonitor();
-		}
+		monitor = new CodeLensMonitor();
+		final IProgressMonitor m = monitor;
 		// Collect the lenses for the viewer
-		codeLensRequest = getCodeLenses(viewer, codeLensProviders, monitor);
+		codeLensRequest = getCodeLenses(viewer, codeLensProviders, m);
 		codeLensRequest.thenAccept(symbols -> {
 			// then group lenses by lines position
 			Map<Position, List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
 			// resolve and render lenses
-			renderCodeLenses(groups, viewer, monitor);
+			promises = renderCodeLenses(groups, viewer, m);
+			if (promises != null) {
+				for (CompletableFuture<ICodeLens> p : promises) {
+					if (!p.isCancelled()) {
+						p.thenAccept(lens -> {
+							if (m.isCanceled()) {
+								return;
+							}
+							Position pos = lens.getPosition();
+							IAnnotationModel annotationModel = viewer.getAnnotationModel();
+							Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
+									? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(pos.offset,
+											1, true, true)
+									: annotationModel.getAnnotationIterator();
+							while (iter.hasNext()) {
+								Annotation ann = iter.next();
+								if (ann instanceof CodeLensAnnotation) {
+									if (m.isCanceled()) {
+										return;
+									}
+									viewer.getTextWidget().getDisplay()
+											.asyncExec(() -> CodeLensDrawingStrategy.draw((CodeLensAnnotation) ann,
+													null, viewer.getTextWidget(), pos.offset, 1, null));
+								}
+							}
+						});
+					} else {
+						System.err.println("resolve canceled");
+					}
+				}
+			}
+
 		});
 	}
 
@@ -126,8 +159,18 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 * Cancel the last request which collect the lenses.
 	 */
 	private void cancel() {
+		if (monitor != null) {
+			monitor.setCanceled(true);
+		}
 		if (codeLensRequest != null && !codeLensRequest.isDone()) {
 			codeLensRequest.cancel(true);
+		}
+		if (promises != null) {
+			promises.forEach(p -> {
+				if (!p.isDone()) {
+					p.cancel(true);
+				}
+			});
 		}
 	}
 
@@ -186,20 +229,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			}
 		});
 
-		return lenses.stream().collect(Collectors.groupingBy(ICodeLens::getPosition));
-
-		// List<List<ICodeLens>> groups = new ArrayList<>();
-		// List<ICodeLens> lastGroup = null;
-		// int offset = -1;
-		// for (ICodeLens lens : lenses) {
-		// if (offset != lens.getPosition().offset) {
-		// lastGroup = new ArrayList<>();
-		// groups.add(lastGroup);
-		// }
-		// lastGroup.add(lens);
-		// offset = lens.getPosition().offset;
-		// }
-		// return groups;
+		return lenses.stream().collect(Collectors.groupingBy(ICodeLens::getPosition, LinkedHashMap::new,
+				Collectors.mapping(Function.identity(), Collectors.toList())));
 	}
 
 	// --------------- CodeLens renderer methods utilities
@@ -209,17 +240,19 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 * @param groups
 	 * @param viewer
 	 * @param monitor
+	 * @return
 	 */
-	private void renderCodeLenses(Map<Position, List<ICodeLens>> groups, ISourceViewer viewer,
-			IProgressMonitor monitor) {
+	private List<CompletableFuture<ICodeLens>> renderCodeLenses(Map<Position, List<ICodeLens>> groups,
+			ISourceViewer viewer, IProgressMonitor monitor) {
 		if (monitor.isCanceled()) {
-			return;
+			return null;
 		}
 		IDocument document = viewer != null ? viewer.getDocument() : null;
 		if (document == null) {
 			// this case comes from when editor is closed before codelens rendered is done.
-			return;
+			return null;
 		}
+		List<CompletableFuture<ICodeLens>> lensesToResolve = new ArrayList<>();
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
 		Map<Annotation, Position> annotationsToAdd = new HashMap<>();
 		// Initialize annotations to delete with last annotations
@@ -228,7 +261,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		List<CodeLensAnnotation> currentAnnotations = new ArrayList<>();
 		// Loop for grouped lenses
 		groups.entrySet().stream().forEach(g -> {
-			Position pos = g.getKey();
+			Position pos = new Position(g.getKey().offset, g.getKey().length);
 			List<ICodeLens> lenses = g.getValue();
 
 			// Try to find existing annotation
@@ -241,12 +274,20 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 				// The annotation exists, remove it from the list to delete.
 				annotationsToRemove.remove(ann);
 			}
-			ann.setCodeLenses(lenses);
+			ann.setCodeLenses(lenses, viewer, monitor);
+			for (ICodeLens lens : lenses) {
+				if (!lens.isResolved() && lens.getResolver() != null) {
+					CompletableFuture<ICodeLens> promise = lens.getResolver().resolveCodeLens(viewer, lens, monitor);
+					if (promise.getNow(null) == null) {
+						lensesToResolve.add(promise);
+					}
+				}
+			}
+
 			currentAnnotations.add(ann);
 		});
-
 		synchronized (getLockObject(annotationModel)) {
-			codeLensAnnotations = currentAnnotations;
+
 			if (annotationsToAdd.size() == 0 && annotationsToRemove.size() == 0) {
 				// None change, do nothing. Here the user could change position of codelens
 				// range
@@ -266,18 +307,28 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 					}
 				}
 			}
-			for (CodeLensAnnotation annotation : currentAnnotations) {
-				resolveCodeLens(viewer, annotation.getLenses(), monitor)
-						.thenAccept(lenses -> viewer.getTextWidget().getDisplay().asyncExec(() -> {
-							if (!annotation.isMarkedDeleted()) {
-								CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
-										lenses.get(0).getPosition().offset, 1, null);
-							} else {
-								System.err.println("Deleted!");
-							}
-						}));
-			}
+			codeLensAnnotations = currentAnnotations;
 		}
+		for (Annotation ann : annotationsToRemove) {
+			((CodeLensAnnotation) ann).dispose();
+		}
+		return lensesToResolve;
+		// for (CodeLensAnnotation annotation : currentAnnotations) {
+		//
+		// final Position pos = annotationModel.getPosition(annotation);
+		// resolveCodeLens(viewer, annotation.getLenses(), monitor)
+		// .thenAccept(lenses -> viewer.getTextWidget().getDisplay().asyncExec(() -> {
+		// if (monitor.isCanceled()) {
+		// return;
+		// }
+		// System.err.println("draw->" + lenses.get(0).getPosition().offset);
+		//
+		// CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
+		// pos.offset, 1, null);
+		//
+		// }));
+		// }
+
 	}
 
 	private static CompletableFuture<List<ICodeLens>> resolveCodeLens(ITextViewer viewer, List<ICodeLens> lenses,
@@ -312,8 +363,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 
 	private static CodeLensAnnotation getCodeLensAnnotationAtLine(IAnnotationModel annotationModel, IDocument document,
 			int lineIndex) {
-		int lineNumber = lineIndex;
-		if (lineNumber >= document.getNumberOfLines()) {
+		int lineNumber = lineIndex + 1;
+		if (lineNumber > document.getNumberOfLines()) {
 			return null;
 		}
 		try {
@@ -349,6 +400,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		}
 		IDocument document = viewer.getDocument();
 		CodeLensAnnotation annotation = getCodeLensAnnotationAtLine(annotationModel, document, lineIndex);
+		// System.err.println(lineIndex + "-> " + annotation);
 		return annotation != null ? annotation.getHeight() : null;
 	}
 

@@ -25,7 +25,7 @@ public class CodeLensDemo {
 		//sourceViewer.setDocument(new Document(delim + "  class A" + delim + "new A" + delim + "new A" + delim + "class B"
 		//		+ delim + "new B" + delim + "interface I" + delim + "class C implements I"), new AnnotationModel());
 
-		sourceViewer.setDocument(new Document(delim + "class 1"), new AnnotationModel());
+		sourceViewer.setDocument(new Document(delim + "class p"), new AnnotationModel());
 		
 		CodeLensManager manager = new CodeLensManager();
 		manager.install(sourceViewer, new ICodeLensProvider[] { new ClassReferencesCodeLensProvider()

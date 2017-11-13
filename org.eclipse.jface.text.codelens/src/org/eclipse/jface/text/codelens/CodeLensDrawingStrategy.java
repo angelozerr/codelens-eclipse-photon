@@ -32,37 +32,57 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		if (!(annotation instanceof CodeLensAnnotation)) {
 			return;
 		}
-		CodeLensDrawingStrategy.draw((CodeLensAnnotation)annotation, gc, textWidget, offset, length, color);
+		CodeLensDrawingStrategy.draw((CodeLensAnnotation) annotation, gc, textWidget, offset, length, color);
 	}
 
-	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
-		int lineIndex = textWidget.getLineAtOffset(offset);
-		int nextLineIndex = lineIndex + 1;
-		if (nextLineIndex >= textWidget.getLineCount()) {
+	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
+			Color color) {		
+		int lineIndex = -1;
+		try {
+			lineIndex = textWidget.getLineAtOffset(offset);
+		} catch (Exception e) {
+			e.printStackTrace();
 			return;
 		}
-		int nextOffset = textWidget.getOffsetAtLine(nextLineIndex);
+		int previousLineIndex = lineIndex - 1;
+		if (previousLineIndex < 0) {
+			return;
+		}
+		int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
 		if (gc != null) {
+			if (annotation.isDisposed()) {
+				//return;
+			}
 			// adjust offset with leading spaces of the next line
-			nextOffset = nextOffset + getLeadingSpaces(textWidget.getLine(nextLineIndex));
-			Point left = textWidget.getLocationAtOffset(nextOffset);
+			previousOffset = previousOffset + getLeadingSpaces(textWidget.getLine(lineIndex));
+			Point left = textWidget.getLocationAtOffset(previousOffset);
 			// Loop for codelens and render it
-			String text = getText(new ArrayList<>(annotation.getLenses()));
+			String text = getText(new ArrayList<>(annotation.getLenses()), annotation.getText());
 			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-			gc.drawText(text, left.x, left.y - annotation.getHeight());
+			gc.drawText(text, left.x, left.y + annotation.getHeight());
 		} else {
 			// Refresh the full line where CodeLens annotation must be drawn in the line
-			// spacing
-			int lineLength = nextOffset - offset;
-			textWidget.redrawRange(offset, lineLength, true);
+			// spacing			
+			String text = getText(new ArrayList<>(annotation.getLenses()), null);
+			if (text.length() == 0 || text.equals(annotation.getText())) {				
+				return;
+			}
+			System.err.println(text + " vs " + annotation.getText());
+			annotation.setText(text);
+			
+			int lineLength = offset - previousOffset;
+			textWidget.redrawRange(previousOffset, lineLength, true);
 		}
 	}
-	
-	private static String getText(List<ICodeLens> lenses) {
+
+	private static String getText(List<ICodeLens> lenses, String oldText) {
 		StringBuilder text = new StringBuilder();
 		for (ICodeLens codeLens : lenses) {
 			if (!codeLens.isResolved()) {
-				// Don't render codelens which is not resolved.
+				// Don't render codelens which is not resolved.	
+				if (oldText != null) {
+					return oldText;
+				}
 				continue;
 			}
 			if (text.length() > 0) {

@@ -59,7 +59,7 @@ public abstract class AbstractCodeLens implements ICodeLens {
 	}
 
 	private static Position create(int afterLineNumber, IDocument document) throws BadLocationException {
-		int offset = document.getLineOffset(afterLineNumber - 1);
+		int offset = document.getLineOffset(afterLineNumber);
 		return new Position(offset, 1);
 	}
 }
