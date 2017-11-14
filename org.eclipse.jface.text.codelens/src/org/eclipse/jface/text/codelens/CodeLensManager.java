@@ -139,8 +139,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 							Annotation ann = iter.next();
 							if (ann instanceof CodeLensAnnotation) {
 								// check if request was canceled.
-								monitor.isCanceled();								
-								((CodeLensAnnotation) ann).redraw(viewer.getTextWidget());								
+								monitor.isCanceled();
+								((CodeLensAnnotation) ann).redraw(viewer.getTextWidget());
 							}
 						}
 					});
@@ -254,6 +254,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			// this case comes from when editor is closed before codelens rendered is done.
 			return null;
 		}
+		// Collect lenses to resolve
 		List<CompletableFuture<ICodeLens>> lensesToResolve = new ArrayList<>();
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
 		Map<Annotation, Position> annotationsToAdd = new HashMap<>();
@@ -288,13 +289,18 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 
 			currentAnnotations.add(ann);
 		});
+		// Mark annotations as deleted to redraw the styled text when annotation must be
+		// drawn.
+		for (Annotation ann : annotationsToRemove) {
+			ann.markDeleted(true);
+		}
 		synchronized (getLockObject(annotationModel)) {
 
 			if (annotationsToAdd.size() == 0 && annotationsToRemove.size() == 0) {
 				// None change, do nothing. Here the user could change position of codelens
 				// range
 				// (ex: user key press
-				// "Enter"), but we don't need to redraw the viewer because change of position
+				// "Enter"), but we don't neeod to redraw the viewer because change of position
 				// is done by AnnotationPainter.
 			} else {
 				if (annotationModel instanceof IAnnotationModelExtension) {
@@ -345,8 +351,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		try {
 			IRegion line = document.getLineInformation(lineNumber);
 			Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
-					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(), line.getLength(), true,
-							true)
+					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(),
+							line.getLength(), true, true)
 					: annotationModel.getAnnotationIterator();
 			while (iter.hasNext()) {
 				Annotation ann = iter.next();
