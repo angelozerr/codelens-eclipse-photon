@@ -2,6 +2,7 @@ package org.eclipse.jface.text.codelens.samples;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
@@ -22,8 +23,8 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 		int lineCount = document.getNumberOfLines();
 		for (int i = 0; i < lineCount; i++) {
 			String line = getLineText(document, i, false);
-			int index = line.indexOf("class ");
-			if (index != -1) {
+			int index = line.trim().indexOf("class ");
+			if (index == 0) {
 				String className = line.substring(index + "class ".length(), line.length());
 				index = className.indexOf(" ");
 				if (index != -1) {
@@ -51,9 +52,7 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 			try {
 
 				for (int i = 0; i < wait; i++) {
-					if (monitor.isCanceled()) {
-						return null;
-					}
+					monitor.isCanceled();
 					synchronized (lock) {
 						lock.wait(1000);
 					}
@@ -61,8 +60,11 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		} catch (Exception e) {
+		} catch (NumberFormatException e) {
 
+		} catch (CancellationException e) {
+			e.printStackTrace();
+			throw e;
 		}
 
 		int refCount = 0;

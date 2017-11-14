@@ -21,11 +21,17 @@ public class CodeLensDemo {
 		shell.setText("CodeLens demo");
 
 		ISourceViewer sourceViewer = new SourceViewer(shell, null, SWT.V_SCROLL | SWT.BORDER);
-		String delim = sourceViewer.getTextWidget().getLineDelimiter();
-		//sourceViewer.setDocument(new Document(delim + "  class A" + delim + "new A" + delim + "new A" + delim + "class B"
-		//		+ delim + "new B" + delim + "interface I" + delim + "class C implements I"), new AnnotationModel());
-
-		sourceViewer.setDocument(new Document(delim + "class p"), new AnnotationModel());
+		sourceViewer.setDocument(new Document(
+				"// Type class & new keyword and see references CodeLens\n" +
+				"// Name class with a number N to emulate Nms before resolving the references CodeLens \n\n" +				
+				"class A\n" +
+				"new A\n" +
+				"new A\n\n" + 
+				"class 5\n" +
+				"new 5\n" +
+				"new 5\n" +
+				"new 5"
+				), new AnnotationModel());
 		
 		CodeLensManager manager = new CodeLensManager();
 		manager.install(sourceViewer, new ICodeLensProvider[] { new ClassReferencesCodeLensProvider()
