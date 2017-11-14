@@ -50,9 +50,6 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		}
 		int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
 		if (gc != null) {
-			if (annotation.isDisposed()) {
-				//return;
-			}
 			// adjust offset with leading spaces of the next line
 			previousOffset = previousOffset + getLeadingSpaces(textWidget.getLine(lineIndex));
 			Point left = textWidget.getLocationAtOffset(previousOffset);

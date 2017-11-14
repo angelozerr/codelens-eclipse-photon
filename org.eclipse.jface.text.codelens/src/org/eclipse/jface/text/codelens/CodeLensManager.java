@@ -70,7 +70,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private IProgressMonitor monitor;
 	private CompletableFuture<List<? extends ICodeLens>> codeLensRequest;
 	private List<CompletableFuture<ICodeLens>> promises;
-	private CompletableFuture<List<ICodeLens>> h;
 
 	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
@@ -151,7 +150,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 					}
 				}
 			}
-
 		});
 	}
 
@@ -309,34 +307,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			}
 			codeLensAnnotations = currentAnnotations;
 		}
-		for (Annotation ann : annotationsToRemove) {
-			((CodeLensAnnotation) ann).dispose();
-		}
 		return lensesToResolve;
-		// for (CodeLensAnnotation annotation : currentAnnotations) {
-		//
-		// final Position pos = annotationModel.getPosition(annotation);
-		// resolveCodeLens(viewer, annotation.getLenses(), monitor)
-		// .thenAccept(lenses -> viewer.getTextWidget().getDisplay().asyncExec(() -> {
-		// if (monitor.isCanceled()) {
-		// return;
-		// }
-		// System.err.println("draw->" + lenses.get(0).getPosition().offset);
-		//
-		// CodeLensDrawingStrategy.draw(annotation, null, viewer.getTextWidget(),
-		// pos.offset, 1, null);
-		//
-		// }));
-		// }
-
-	}
-
-	private static CompletableFuture<List<ICodeLens>> resolveCodeLens(ITextViewer viewer, List<ICodeLens> lenses,
-			IProgressMonitor monitor) {
-		List<CompletableFuture<ICodeLens>> com = lenses.stream()
-				.map(lens -> lens.getResolver().resolveCodeLens(viewer, lens, monitor)).collect(Collectors.toList());
-		return CompletableFuture.allOf(com.toArray(new CompletableFuture[com.size()]))
-				.thenApply(v -> com.stream().map(CompletableFuture::join).collect(Collectors.toList()));
 	}
 
 	/**
