@@ -381,7 +381,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		}
 		IDocument document = viewer.getDocument();
 		CodeLensAnnotation annotation = getCodeLensAnnotationAtLine(annotationModel, document, lineIndex);
-		// System.err.println(lineIndex + "-> " + annotation);
 		return annotation != null ? annotation.getHeight() : null;
 	}
 
