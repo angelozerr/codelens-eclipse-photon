@@ -68,8 +68,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private AnnotationPainter painter;
 	private List<ICodeLensProvider> codeLensProviders;
 	private IProgressMonitor monitor;
-	private CompletableFuture<List<? extends ICodeLens>> codeLensRequest;
-	private List<CompletableFuture<ICodeLens>> promises;
+	private CompletableFuture<List<? extends ICodeLens>> codeLensProviderRequest;
+	private List<CompletableFuture<ICodeLens>> codeLensResolverRequest;
 
 	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
@@ -114,61 +114,61 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		monitor = new CodeLensMonitor();
 		final IProgressMonitor m = monitor;
 		// Collect the lenses for the viewer
-		codeLensRequest = getCodeLenses(viewer, codeLensProviders, m);
-		codeLensRequest.thenAccept(symbols -> {
+		codeLensProviderRequest = getCodeLenses(viewer, codeLensProviders, m);
+		codeLensProviderRequest.thenAccept(symbols -> {
+			// check if request was canceled.
+			m.isCanceled();
 			// then group lenses by lines position
 			Map<Position, List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
 			// resolve and render lenses
-			promises = renderCodeLenses(groups, viewer, m);
-			if (promises != null) {
-				for (CompletableFuture<ICodeLens> p : promises) {
-					if (!p.isCancelled()) {
-						p.thenAccept(lens -> {
-							if (m.isCanceled()) {
-								return;
+			codeLensResolverRequest = renderCodeLenses(groups, viewer, m);
+			if (codeLensResolverRequest != null) {
+				for (CompletableFuture<ICodeLens> p : codeLensResolverRequest) {
+					// check if request was canceled.
+					monitor.isCanceled();
+					p.thenAccept(lens -> {
+						// check if request was canceled.
+						monitor.isCanceled();
+						Position pos = lens.getPosition();
+						IAnnotationModel annotationModel = viewer.getAnnotationModel();
+						Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
+								? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(pos.offset, 1,
+										true, true)
+								: annotationModel.getAnnotationIterator();
+						while (iter.hasNext()) {
+							Annotation ann = iter.next();
+							if (ann instanceof CodeLensAnnotation) {
+								// check if request was canceled.
+								monitor.isCanceled();								
+								((CodeLensAnnotation) ann).redraw(viewer.getTextWidget());								
 							}
-							Position pos = lens.getPosition();
-							IAnnotationModel annotationModel = viewer.getAnnotationModel();
-							Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
-									? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(pos.offset,
-											1, true, true)
-									: annotationModel.getAnnotationIterator();
-							while (iter.hasNext()) {
-								Annotation ann = iter.next();
-								if (ann instanceof CodeLensAnnotation) {
-									if (m.isCanceled()) {
-										return;
-									}
-									viewer.getTextWidget().getDisplay()
-											.asyncExec(() -> CodeLensDrawingStrategy.draw((CodeLensAnnotation) ann,
-													null, viewer.getTextWidget(), pos.offset, 1, null));
-								}
-							}
-						});
-					} else {
-						System.err.println("resolve canceled");
-					}
+						}
+					});
 				}
 			}
 		});
 	}
 
 	/**
-	 * Cancel the last request which collect the lenses.
+	 * Cancel the codelens process.
 	 */
 	private void cancel() {
+		// Cancel the last progress monitor.
 		if (monitor != null) {
 			monitor.setCanceled(true);
 		}
-		if (codeLensRequest != null && !codeLensRequest.isDone()) {
-			codeLensRequest.cancel(true);
+		// Cancel the last request which provides the lenses.
+		cancel(codeLensProviderRequest);
+		// Cancel the last request which resolves the lenses.
+		if (codeLensResolverRequest != null) {
+			codeLensResolverRequest.stream().forEach(f -> cancel(f));
 		}
-		if (promises != null) {
-			promises.forEach(p -> {
-				if (!p.isDone()) {
-					p.cancel(true);
-				}
-			});
+
+	}
+
+	private static void cancel(CompletableFuture<?> f) {
+		if (f != null && !f.isCancelled() && !f.isDone()) {
+			f.cancel(true);
 		}
 	}
 
@@ -182,14 +182,19 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	// --------------- CodeLens providers methods utilities
 
 	/**
-	 * Return a list of {@link CompletableFuture} which provides the list of
+	 * Return the list of {@link CompletableFuture} which provides the list of
 	 * {@link ICodeLens} for the given <code>viewer</code> by using the given
 	 * providers.
 	 * 
 	 * @param viewer
-	 * @param monitor
+	 *            the text viewer.
 	 * @param providers
-	 * @return
+	 *            the CodeLens list providers.
+	 * @param monitor
+	 *            the progress monitor.
+	 * @return the list of {@link CompletableFuture} which provides the list of
+	 *         {@link ICodeLens} for the given <code>viewer</code> by using the
+	 *         given providers.
 	 */
 	private static CompletableFuture<List<? extends ICodeLens>> getCodeLenses(ITextViewer viewer,
 			List<ICodeLensProvider> providers, IProgressMonitor monitor) {
@@ -200,9 +205,12 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	}
 
 	/**
+	 * Returns a sorted Map which groups the given lenses by same position line
 	 * 
 	 * @param lenses
+	 *            list of lenses to group.
 	 * @param providers
+	 *            CodeLens providers used to retrieve lenses.
 	 */
 	private static Map<Position, List<ICodeLens>> goupByLines(List<? extends ICodeLens> lenses,
 			List<ICodeLensProvider> providers) {
@@ -212,21 +220,18 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 				return -1;
 			} else if (a.getPosition().offset > b.getPosition().offset) {
 				return 1;
+			} else if (a.getResolver() == null && b.getResolver() != null) {
+				return -1;
+			} else if (a.getResolver() != null && b.getResolver() == null) {
+				return 1;
 			} else if (providers.indexOf(a.getResolver()) < providers.indexOf(b.getResolver())) {
 				return -1;
 			} else if (providers.indexOf(a.getResolver()) > providers.indexOf(b.getResolver())) {
 				return 1;
-			}
-			/*
-			 * else if (a.getSymbol().getRange().startColumn <
-			 * b.getSymbol().getRange().startColumn) { return -1; } else if
-			 * (a.getSymbol().getRange().startColumn > b.getSymbol().getRange().startColumn)
-			 * { return 1; }
-			 */ else {
+			} else {
 				return 0;
 			}
 		});
-
 		return lenses.stream().collect(Collectors.groupingBy(ICodeLens::getPosition, LinkedHashMap::new,
 				Collectors.mapping(Function.identity(), Collectors.toList())));
 	}
@@ -242,9 +247,8 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 */
 	private List<CompletableFuture<ICodeLens>> renderCodeLenses(Map<Position, List<ICodeLens>> groups,
 			ISourceViewer viewer, IProgressMonitor monitor) {
-		if (monitor.isCanceled()) {
-			return null;
-		}
+		// check if request was canceled.
+		monitor.isCanceled();
 		IDocument document = viewer != null ? viewer.getDocument() : null;
 		if (document == null) {
 			// this case comes from when editor is closed before codelens rendered is done.
@@ -272,7 +276,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 				// The annotation exists, remove it from the list to delete.
 				annotationsToRemove.remove(ann);
 			}
-			ann.setCodeLenses(lenses, viewer, monitor);
+			ann.update(lenses);
 			for (ICodeLens lens : lenses) {
 				if (!lens.isResolved() && lens.getResolver() != null) {
 					CompletableFuture<ICodeLens> promise = lens.getResolver().resolveCodeLens(viewer, lens, monitor);
@@ -341,7 +345,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		try {
 			IRegion line = document.getLineInformation(lineNumber);
 			Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
-					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(), 1, true,
+					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(), line.getLength(), true,
 							true)
 					: annotationModel.getAnnotationIterator();
 			while (iter.hasNext()) {

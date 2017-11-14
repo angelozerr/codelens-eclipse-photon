@@ -36,7 +36,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 	}
 
 	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
-			Color color) {		
+			Color color) {
 		int lineIndex = -1;
 		try {
 			lineIndex = textWidget.getLineAtOffset(offset);
@@ -50,23 +50,29 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		}
 		int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
 		if (gc != null) {
-			// adjust offset with leading spaces of the next line
-			previousOffset = previousOffset + getLeadingSpaces(textWidget.getLine(lineIndex));
+			int lineOffset = textWidget.getOffsetAtLine(lineIndex)
+					+ CodeLensHelper.getLeadingSpaces(textWidget.getLine(lineIndex));
+			Point leftL = textWidget.getLocationAtOffset(lineOffset);
+
 			Point left = textWidget.getLocationAtOffset(previousOffset);
 			// Loop for codelens and render it
 			String text = getText(new ArrayList<>(annotation.getLenses()), annotation.getText());
 			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-			gc.drawText(text, left.x, left.y + annotation.getHeight());
+			gc.setBackground(textWidget.getBackground());
+			gc.drawText(text, leftL.x, left.y + annotation.getHeight());
 		} else {
 			// Refresh the full line where CodeLens annotation must be drawn in the line
-			// spacing			
+			// spacing
 			String text = getText(new ArrayList<>(annotation.getLenses()), null);
-			if (text.length() == 0 || text.equals(annotation.getText())) {				
-				return;
+			if (text.length() == 0 || text.equals(annotation.getText())) {
+				// CodeLens has not changed, no need to refresh it
+				// FIXME: manage leading spaces (if leading spaces doens't changed, no need to
+				// refresh it too)
+				if (CodeLensHelper.getLeadingSpaces(textWidget.getLine(lineIndex)) == 0)
+					return;
 			}
-			System.err.println(text + " vs " + annotation.getText());
 			annotation.setText(text);
-			
+
 			int lineLength = offset - previousOffset;
 			textWidget.redrawRange(previousOffset, lineLength, true);
 		}
@@ -76,7 +82,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 		StringBuilder text = new StringBuilder();
 		for (ICodeLens codeLens : lenses) {
 			if (!codeLens.isResolved()) {
-				// Don't render codelens which is not resolved.	
+				// Don't render codelens which is not resolved.
 				if (oldText != null) {
 					return oldText;
 				}
@@ -89,20 +95,6 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			text.append(title);
 		}
 		return text.toString();
-	}
-
-	private static int getLeadingSpaces(String line) {
-		int counter = 0;
-		char[] chars = line.toCharArray();
-		for (char c : chars) {
-			if (c == '\t')
-				counter++;
-			else if (c == ' ')
-				counter++;
-			else
-				break;
-		}
-		return counter;
 	}
 
 }

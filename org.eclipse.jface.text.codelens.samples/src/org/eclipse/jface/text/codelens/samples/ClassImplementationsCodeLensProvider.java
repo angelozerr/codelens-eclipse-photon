@@ -26,8 +26,8 @@ public class ClassImplementationsCodeLensProvider extends AbstractSyncCodeLensPr
 	}
 
 	private void updateCodeLens(int lineIndex, IDocument document, String token, List<ICodeLens> lenses) {
-		String line = getLineText(document, lineIndex, false);
-		int index = line.trim().indexOf(token);
+		String line = getLineText(document, lineIndex, false).trim();
+		int index = line.indexOf(token);
 		if (index == 0) {
 			String className = line.substring(index + token.length(), line.length());
 			index = className.indexOf(" ");

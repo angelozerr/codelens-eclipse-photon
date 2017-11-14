@@ -13,9 +13,8 @@ package org.eclipse.jface.text.codelens;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.swt.custom.StyledText;
 
 /**
  * CodeLens annotation.
@@ -44,8 +43,20 @@ public class CodeLensAnnotation extends Annotation {
 		return 20;
 	}
 
-	public void setCodeLenses(List<ICodeLens> lenses, ITextViewer viewer, IProgressMonitor monitor) {
+	public void update(List<ICodeLens> lenses) {
 		this.lenses.clear();
 		this.lenses.addAll(lenses);
+	}
+
+	public void redraw(StyledText text) {
+		if (text == null || text.isDisposed()) {
+			return;
+		}
+		text.getDisplay().asyncExec(() -> {
+			if (text.isDisposed()) {
+				return;
+			}
+			CodeLensDrawingStrategy.draw(this, null, text, getLenses().get(0).getPosition().offset, 1, null);
+		});
 	}
 }

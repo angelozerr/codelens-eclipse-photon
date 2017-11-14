@@ -20,17 +20,28 @@ import org.eclipse.jface.text.Position;
  */
 public abstract class AbstractCodeLens implements ICodeLens {
 
+	/**
+	 * 
+	 */
 	private final Position position;
+
+	/**
+	 * 
+	 */
 	private final ICodeLensResolver resolver;
+
+	/**
+	 * 
+	 */
 	private Command command;
 
-	public AbstractCodeLens(int afterLineNumber, IDocument document) throws BadLocationException {
-		this(afterLineNumber, document, null);
+	public AbstractCodeLens(int beforeLineNumber, IDocument document) throws BadLocationException {
+		this(beforeLineNumber, document, null);
 	}
 
-	public AbstractCodeLens(int afterLineNumber, IDocument document, ICodeLensResolver provider)
+	public AbstractCodeLens(int beforeLineNumber, IDocument document, ICodeLensResolver provider)
 			throws BadLocationException {
-		this.position = create(afterLineNumber, document);
+		this.position = CodeLensHelper.getPosition(beforeLineNumber, document);
 		this.resolver = provider;
 	}
 
@@ -58,8 +69,4 @@ public abstract class AbstractCodeLens implements ICodeLens {
 		return resolver == null || command != null;
 	}
 
-	private static Position create(int afterLineNumber, IDocument document) throws BadLocationException {
-		int offset = document.getLineOffset(afterLineNumber);
-		return new Position(offset, 1);
-	}
 }

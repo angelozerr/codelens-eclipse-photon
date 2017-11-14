@@ -22,14 +22,10 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 		List<ICodeLens> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();
 		for (int i = 0; i < lineCount; i++) {
-			String line = getLineText(document, i, false);
-			int index = line.trim().indexOf("class ");
+			String line = getLineText(document, i, false).trim();
+			int index = line.indexOf("class ");
 			if (index == 0) {
-				String className = line.substring(index + "class ".length(), line.length());
-				index = className.indexOf(" ");
-				if (index != -1) {
-					className = className.substring(0, index);
-				}
+				String className = line.substring(index + "class ".length(), line.length()).trim();				
 				if (className.length() > 0) {
 					try {
 						lenses.add(new ClassCodeLens(className, i, document, this));
