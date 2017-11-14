@@ -254,7 +254,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			// this case comes from when editor is closed before codelens rendered is done.
 			return null;
 		}
-		// Collect lenses to resolve
 		List<CompletableFuture<ICodeLens>> lensesToResolve = new ArrayList<>();
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
 		Map<Annotation, Position> annotationsToAdd = new HashMap<>();
@@ -278,24 +277,29 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 				annotationsToRemove.remove(ann);
 			}
 			ann.update(lenses);
+			// Collect lenses to resolve
 			for (ICodeLens lens : lenses) {
 				if (!lens.isResolved() && lens.getResolver() != null) {
+					// lens is not resolved and it exists a resolver.
 					CompletableFuture<ICodeLens> promise = lens.getResolver().resolveCodeLens(viewer, lens, monitor);
+					// Try to resolve now
 					if (promise.getNow(null) == null) {
+						// It will be resolved in the "resolved" step.
 						lensesToResolve.add(promise);
 					}
 				}
 			}
-
 			currentAnnotations.add(ann);
 		});
+		// check if request was canceled.
+		monitor.isCanceled();
 		// Mark annotations as deleted to redraw the styled text when annotation must be
 		// drawn.
 		for (Annotation ann : annotationsToRemove) {
 			ann.markDeleted(true);
 		}
+		// Update annotation model
 		synchronized (getLockObject(annotationModel)) {
-
 			if (annotationsToAdd.size() == 0 && annotationsToRemove.size() == 0) {
 				// None change, do nothing. Here the user could change position of codelens
 				// range
