@@ -68,9 +68,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private ISourceViewer viewer;
 	private AnnotationPainter painter;
 	private List<ICodeLensProvider> codeLensProviders;
-	private IProgressMonitor monitor;
-	private CompletableFuture<List<? extends ICodeLens>> codeLensProviderRequest;
-	private List<CompletableFuture<ICodeLens>> codeLensResolverRequest;
 
 	/**
 	 * The font to use to draw the lenses annotations.
@@ -81,6 +78,11 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 * The color to use to draw the lenses annotations.
 	 */
 	private Color color;
+
+	/**
+	 * The current progress monitor.
+	 */
+	private IProgressMonitor monitor;
 
 	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
@@ -121,22 +123,19 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		this.color = color;
 	}
 
-	/**
-	 * Uninstalls this codelens manager.
-	 */
-	public void uninstall() {
-		StyledText text = viewer.getTextWidget();
-		if (text != null && !text.isDisposed()) {
-
-		}
-	}
-
 	public void setCodeLensProviders(ICodeLensProvider[] codeLensProviders) {
 		this.codeLensProviders = Arrays.asList(codeLensProviders);
 	}
 
-	public void setMonitor(IProgressMonitor monitor) {
-		this.monitor = monitor;
+	/**
+	 * Uninstalls this codelens manager.
+	 */
+	public void uninstall() {
+		cancel();
+		if (font != null) {
+			font.dispose();
+			font = null;
+		}
 	}
 
 	/**
@@ -147,19 +146,30 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		if (viewer == null || codeLensProviders == null || viewer.getAnnotationModel() == null) {
 			return;
 		}
+		// Initialize painet with lens drawing strategy.
 		initPainterIfNeeded();
+		// Cancel the last progress monitor to cancel last resolve and render of lenses
 		cancel();
+		// Refresh the lenses by using the new progress monitor.
 		monitor = new CodeLensMonitor();
-		final IProgressMonitor m = monitor;
+		refresh(monitor);
+	}
+
+	/**
+	 * Refresh the lenses by using the given progress monitor.
+	 * 
+	 * @param monitor
+	 *            the progress monitor.
+	 */
+	private void refresh(final IProgressMonitor monitor) {
 		// Collect the lenses for the viewer
-		codeLensProviderRequest = getCodeLenses(viewer, codeLensProviders, m);
-		codeLensProviderRequest.thenAccept(symbols -> {
+		getCodeLenses(viewer, codeLensProviders, monitor).thenAccept(symbols -> {
 			// check if request was canceled.
-			m.isCanceled();
+			monitor.isCanceled();
 			// then group lenses by lines position
 			Map<Position, List<ICodeLens>> groups = goupByLines(symbols, codeLensProviders);
 			// resolve and render lenses
-			codeLensResolverRequest = renderCodeLenses(groups, viewer, m);
+			List<CompletableFuture<ICodeLens>> codeLensResolverRequest = renderCodeLenses(groups, viewer, monitor);
 			if (codeLensResolverRequest != null) {
 				for (CompletableFuture<ICodeLens> p : codeLensResolverRequest) {
 					// check if request was canceled.
@@ -194,30 +204,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		// Cancel the last progress monitor.
 		if (monitor != null) {
 			monitor.setCanceled(true);
-		}
-		// Cancel the last request which provides the lenses.
-		cancel(codeLensProviderRequest);
-		// Cancel the last request which resolves the lenses.
-		if (codeLensResolverRequest != null) {
-			codeLensResolverRequest.stream().forEach(f -> cancel(f));
-		}
-
-	}
-
-	private static void cancel(CompletableFuture<?> f) {
-		if (f != null && !f.isCancelled() && !f.isDone()) {
-			f.cancel(true);
-		}
-	}
-
-	/**
-	 * Dispose the codelens manager.
-	 */
-	public void dispose() {
-		cancel();
-		if (font != null) {
-			font.dispose();
-			font = null;
 		}
 	}
 
@@ -281,11 +267,15 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	// --------------- CodeLens renderer methods utilities
 
 	/**
+	 * Render the codelens grouped by line position.
 	 * 
 	 * @param groups
+	 *            lenses grouped by lines position
 	 * @param viewer
+	 *            the viewer
 	 * @param monitor
-	 * @return
+	 *            the progress monitot
+	 * @return the list of lenses to resolve.
 	 */
 	private List<CompletableFuture<ICodeLens>> renderCodeLenses(Map<Position, List<ICodeLens>> groups,
 			ISourceViewer viewer, IProgressMonitor monitor) {
@@ -414,20 +404,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		} catch (BadLocationException e) {
 		}
 		return null;
-	}
-
-	@Override
-	public Integer getLineSpacing(int lineIndex) {
-		if (viewer == null) {
-			return null;
-		}
-		IAnnotationModel annotationModel = viewer.getAnnotationModel();
-		if (annotationModel == null) {
-			return null;
-		}
-		IDocument document = viewer.getDocument();
-		CodeLensAnnotation annotation = getCodeLensAnnotationAtLine(annotationModel, document, lineIndex);
-		return annotation != null ? annotation.getHeight() : null;
 	}
 
 	/**
@@ -560,6 +536,20 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		} catch (SecurityException e) {
 			return null;
 		}
+	}
+
+	@Override
+	public Integer getLineSpacing(int lineIndex) {
+		if (viewer == null) {
+			return null;
+		}
+		IAnnotationModel annotationModel = viewer.getAnnotationModel();
+		if (annotationModel == null) {
+			return null;
+		}
+		IDocument document = viewer.getDocument();
+		CodeLensAnnotation annotation = getCodeLensAnnotationAtLine(annotationModel, document, lineIndex);
+		return annotation != null ? annotation.getHeight() : null;
 	}
 
 }
