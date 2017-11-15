@@ -10,9 +10,13 @@
  */
 package org.eclipse.jface.text.codelens;
 
+import java.util.function.Consumer;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.widgets.Display;
 
 class CodeLensHelper {
 
@@ -53,5 +57,22 @@ class CodeLensHelper {
 				break;
 		}
 		return counter;
+	}
+	
+	public static void runInUIThread(StyledText text, Consumer<StyledText> runable) {
+		if (text == null || text.isDisposed()) {
+			return;
+		}
+		Display display = text.getDisplay();
+		if (display.getThread() == Thread.currentThread()) {
+			runable.accept(text);
+		} else {
+			display.asyncExec(() -> {
+				if (text.isDisposed()) {
+					return;
+				}
+				runable.accept(text);
+			});
+		}
 	}
 }

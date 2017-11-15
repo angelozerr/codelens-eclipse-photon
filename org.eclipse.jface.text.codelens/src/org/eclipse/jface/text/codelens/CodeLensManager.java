@@ -325,8 +325,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		});
 		// check if request was canceled.
 		monitor.isCanceled();
-		// Mark annotations as deleted to redraw the styled text when annotation must be
-		// drawn.
+		// Mark annotation as deleted to ignore the draw
 		for (Annotation ann : annotationsToRemove) {
 			ann.markDeleted(true);
 		}
@@ -353,6 +352,27 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			}
 			codeLensAnnotations = currentAnnotations;
 		}
+
+		if (!annotationsToRemove.isEmpty()) {
+			CodeLensAnnotation ann = (CodeLensAnnotation) annotationsToRemove.get(0);
+			if (ann.isFirstLine(viewer.getTextWidget())) {
+				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(0));
+			} else {
+				// redraw the styled text to hide old draw of annotations
+				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> {
+					text.redraw();
+					// update caret offset since line spacing has changed.
+					text.setCaretOffset(text.getCaretOffset());
+				});
+			}
+		}
+		if (!currentAnnotations.isEmpty()) {
+			CodeLensAnnotation ann = currentAnnotations.get(0);
+			if (ann.isFirstLine(viewer.getTextWidget())) {
+				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(ann.getHeight()));
+			}
+		}
+
 		return lensesToResolve;
 	}
 

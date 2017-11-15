@@ -37,32 +37,27 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
 	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
-		if (annotation.isMarkedDeleted()) {
-			// When annotation is deleted, redraw the styled text to hide old draw of
-			// annotations
-			textWidget.redraw();
-			// update caret offset since line spacing has changed.
-			textWidget.setCaretOffset(textWidget.getCaretOffset());
+		if (annotation.isMarkedDeleted()) {			
 			return;
 		}
 		int lineIndex = -1;
 		try {
 			lineIndex = textWidget.getLineAtOffset(offset);
 		} catch (Exception e) {
-			e.printStackTrace();
 			return;
 		}
-		int previousLineIndex = lineIndex - 1;
-		if (previousLineIndex < 0) {
-			return;
-		}
-		int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
+
 		if (gc != null) {
 			int lineOffset = textWidget.getOffsetAtLine(lineIndex)
 					+ CodeLensHelper.getLeadingSpaces(textWidget.getLine(lineIndex));
 			Point leftL = textWidget.getLocationAtOffset(lineOffset);
 
-			Point left = textWidget.getLocationAtOffset(previousOffset);
+			int y = 0;
+			if (lineIndex > 0) {
+				int previousLineIndex = lineIndex - 1;
+				int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
+				y = textWidget.getLocationAtOffset(previousOffset).y + annotation.getHeight();
+			}
 			// Loop for codelens and render it
 			String text = getText(new ArrayList<>(annotation.getLenses()), annotation.getText());
 			gc.setForeground(color);
@@ -71,8 +66,12 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			if (font != null) {
 				gc.setFont(font);
 			}
-			gc.drawText(text, leftL.x, left.y + annotation.getHeight());
+			gc.drawText(text, leftL.x, y);
 		} else {
+			int previousLineIndex = lineIndex - 1;
+			if (previousLineIndex < 0) {
+				return;
+			}
 			// Refresh the full line where CodeLens annotation must be drawn in the line
 			// spacing
 			String text = getText(new ArrayList<>(annotation.getLenses()), null);
@@ -84,7 +83,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 					return;
 			}
 			annotation.setText(text);
-
+			int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
 			int lineLength = offset - previousOffset;
 			textWidget.redrawRange(previousOffset, lineLength, true);
 		}

@@ -51,15 +51,8 @@ public class CodeLensAnnotation extends Annotation {
 	}
 
 	public void redraw(StyledText text) {
-		if (text == null || text.isDisposed()) {
-			return;
-		}
-		text.getDisplay().asyncExec(() -> {
-			if (text.isDisposed()) {
-				return;
-			}
-			CodeLensDrawingStrategy.draw(this, null, text, getLenses().get(0).getPosition().offset, 1, null);
-		});
+		CodeLensHelper.runInUIThread(text,
+				(t) -> CodeLensDrawingStrategy.draw(this, null, t, getLenses().get(0).getPosition().offset, 1, null));
 	}
 
 	/**
@@ -69,5 +62,9 @@ public class CodeLensAnnotation extends Annotation {
 	 */
 	public Font getFont() {
 		return font;
+	}
+
+	public boolean isFirstLine(StyledText textWidget) {
+		return getLenses().get(0).getPosition().offset == 0;
 	}
 }
