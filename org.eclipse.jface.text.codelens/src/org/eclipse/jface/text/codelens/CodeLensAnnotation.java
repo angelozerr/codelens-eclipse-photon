@@ -15,6 +15,7 @@ import java.util.List;
 
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Font;
 
 /**
  * CodeLens annotation.
@@ -27,16 +28,17 @@ public class CodeLensAnnotation extends Annotation {
 	 */
 	public static final String TYPE = "org.eclipse.jface.text.codelens"; //$NON-NLS-1$
 
+	private final Font font;
 	private final List<ICodeLens> lenses;
 
-	public CodeLensAnnotation() {
+	public CodeLensAnnotation(Font font) {
 		super(TYPE, false, "");
+		this.font = font;
 		this.lenses = new ArrayList<>();
 	}
 
 	public List<ICodeLens> getLenses() {
 		return lenses;
-
 	}
 
 	public int getHeight() {
@@ -58,5 +60,14 @@ public class CodeLensAnnotation extends Annotation {
 			}
 			CodeLensDrawingStrategy.draw(this, null, text, getLenses().get(0).getPosition().offset, 1, null);
 		});
+	}
+
+	/**
+	 * Returns the lens font and null otherwise.
+	 * 
+	 * @return the lens font and null otherwise.
+	 */
+	public Font getFont() {
+		return font;
 	}
 }

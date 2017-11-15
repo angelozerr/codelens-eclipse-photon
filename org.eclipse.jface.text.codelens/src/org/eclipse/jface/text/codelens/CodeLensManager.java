@@ -44,10 +44,12 @@ import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.jface.text.source.IAnnotationModelExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 
 /**
  * CodeLens manager.
@@ -56,11 +58,10 @@ import org.eclipse.swt.graphics.RGB;
 public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider {
 
 	private static final IDrawingStrategy CODELENS_STRATEGY = new CodeLensDrawingStrategy();
-	private static final Object CODELENS = "codelens";
-	private static final Color DUMMY_COLOR = new Color(null, new RGB(0, 0, 0));
+	private static final String CODELENS = "codelens";
 
 	/**
-	 * Holds the current color symbol annotations.
+	 * Holds the current lens annotations.
 	 */
 	private List<CodeLensAnnotation> codeLensAnnotations = null;
 
@@ -71,6 +72,16 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private CompletableFuture<List<? extends ICodeLens>> codeLensProviderRequest;
 	private List<CompletableFuture<ICodeLens>> codeLensResolverRequest;
 
+	/**
+	 * The font to use to draw the lenses annotations.
+	 */
+	private Font font;
+
+	/**
+	 * The color to use to draw the lenses annotations.
+	 */
+	private Color color;
+
 	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
 		this.viewer = viewer;
@@ -80,7 +91,34 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		if (text == null || text.isDisposed()) {
 			return;
 		}
+		// Initialize defaut lens font and color.
+		FontData[] fds = text.getFont().getFontData();
+		for (int i = 0; i < fds.length; i++) {
+			fds[i].setStyle(fds[i].getStyle() | SWT.ITALIC);
+		}
+		setFont(new Font(text.getDisplay(), fds));
+		setColor(text.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 		text.setLineSpacingProvider(this);
+	}
+
+	/**
+	 * Set the font to use to draw the lenses annotations.
+	 * 
+	 * @param font
+	 *            the font to use to draw the lenses annotations.
+	 */
+	public void setFont(Font font) {
+		this.font = font;
+	}
+
+	/**
+	 * Set the color to use to draw the lenses annotations.
+	 * 
+	 * @param color
+	 *            the color to use to draw the lenses annotations.
+	 */
+	public void setColor(Color color) {
+		this.color = color;
 	}
 
 	/**
@@ -177,6 +215,10 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 */
 	public void dispose() {
 		cancel();
+		if (font != null) {
+			font.dispose();
+			font = null;
+		}
 	}
 
 	// --------------- CodeLens providers methods utilities
@@ -270,7 +312,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			CodeLensAnnotation ann = findExistingAnnotation(pos, annotationModel);
 			if (ann == null) {
 				// The annotation doesn't exists, create it.
-				ann = new CodeLensAnnotation();
+				ann = new CodeLensAnnotation(font);
 				annotationsToAdd.put(ann, pos);
 			} else {
 				// The annotation exists, remove it from the list to delete.
@@ -445,10 +487,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		}
 		painter.addDrawingStrategy(CODELENS, CODELENS_STRATEGY);
 		painter.addAnnotationType(CodeLensAnnotation.TYPE, CODELENS);
-		// the painter needs a color for an annotation type
-		// we must set it with a dummy color even if we don't use it to draw the color
-		// symbol.
-		painter.setAnnotationTypeColor(CodeLensAnnotation.TYPE, DUMMY_COLOR);
+		painter.setAnnotationTypeColor(CodeLensAnnotation.TYPE, color);
 		this.painter = painter;
 		return painter;
 	}

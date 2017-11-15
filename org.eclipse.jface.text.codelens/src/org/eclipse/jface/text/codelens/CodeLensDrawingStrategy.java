@@ -15,9 +15,9 @@ import java.util.List;
 
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 
@@ -65,8 +65,12 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 			Point left = textWidget.getLocationAtOffset(previousOffset);
 			// Loop for codelens and render it
 			String text = getText(new ArrayList<>(annotation.getLenses()), annotation.getText());
-			gc.setForeground(textWidget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+			gc.setForeground(color);
 			gc.setBackground(textWidget.getBackground());
+			Font font = annotation.getFont();
+			if (font != null) {
+				gc.setFont(font);
+			}
 			gc.drawText(text, leftL.x, left.y + annotation.getHeight());
 		} else {
 			// Refresh the full line where CodeLens annotation must be drawn in the line
