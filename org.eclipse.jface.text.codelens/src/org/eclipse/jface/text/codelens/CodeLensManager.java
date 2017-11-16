@@ -6,11 +6,10 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - Provide CodeLens support - Bug XXXXXX
+ *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
  */
 package org.eclipse.jface.text.codelens;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,20 +25,13 @@ import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.IPainter;
-import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ISynchronizable;
 import org.eclipse.jface.text.ITextViewer;
-import org.eclipse.jface.text.ITextViewerExtension2;
-import org.eclipse.jface.text.PaintManager;
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationPainter;
 import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy;
-import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.jface.text.source.IAnnotationModelExtension2;
@@ -54,20 +46,39 @@ import org.eclipse.swt.graphics.FontData;
 /**
  * CodeLens manager.
  *
+ * @since 3.107
  */
 public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider {
 
+	/**
+	 * The annotation codelens strategy singleton.
+	 */
 	private static final IDrawingStrategy CODELENS_STRATEGY = new CodeLensDrawingStrategy();
-	private static final String CODELENS = "codelens";
+
+	/**
+	 * The annotation codelens strategy ID.
+	 */
+	private static final String CODELENS_STRATEGY_ID = "codelens";
+
+	/**
+	 * The source viewer
+	 */
+	private ISourceViewer viewer;
+
+	/**
+	 * The annotation painter to use to draw the codelens.
+	 */
+	private AnnotationPainter painter;
+
+	/**
+	 * The list of codelens providers.
+	 */
+	private List<ICodeLensProvider> codeLensProviders;
 
 	/**
 	 * Holds the current lens annotations.
 	 */
 	private List<CodeLensAnnotation> codeLensAnnotations = null;
-
-	private ISourceViewer viewer;
-	private AnnotationPainter painter;
-	private List<ICodeLensProvider> codeLensProviders;
 
 	/**
 	 * The font to use to draw the lenses annotations.
@@ -75,19 +86,27 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	private Font font;
 
 	/**
-	 * The color to use to draw the lenses annotations.
-	 */
-	private Color color;
-
-	/**
 	 * The current progress monitor.
 	 */
 	private IProgressMonitor monitor;
 
-	public void install(ISourceViewer viewer, ICodeLensProvider[] codeLensProviders) {
+	/**
+	 * Installs this codelens manager with the given arguments.
+	 * 
+	 * @param viewer
+	 *            the source viewer
+	 * @param painter
+	 *            the annotation painter to use to draw lenses
+	 * @param codeLensProviders
+	 *            the array of codelens providers, must not be empty
+	 */
+	public void install(ISourceViewer viewer, AnnotationPainter painter, ICodeLensProvider[] codeLensProviders) {
 		Assert.isNotNull(viewer);
+		Assert.isNotNull(painter);
+		Assert.isNotNull(codeLensProviders);
 		this.viewer = viewer;
-		this.painter = null;
+		this.painter = painter;
+		initPainter(painter);
 		setCodeLensProviders(codeLensProviders);
 		StyledText text = this.viewer.getTextWidget();
 		if (text == null || text.isDisposed()) {
@@ -101,6 +120,17 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		setFont(new Font(text.getDisplay(), fds));
 		setColor(text.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 		text.setLineSpacingProvider(this);
+	}
+
+	/**
+	 * Initialize painter with lens drawing strategy.
+	 * 
+	 * @param painter
+	 *            the annotation painter to initialize with lens drawing strategy.
+	 */
+	private void initPainter(AnnotationPainter painter) {
+		painter.addDrawingStrategy(CODELENS_STRATEGY_ID, CODELENS_STRATEGY);
+		painter.addAnnotationType(CodeLensAnnotation.TYPE, CODELENS_STRATEGY_ID);
 	}
 
 	/**
@@ -120,9 +150,15 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	 *            the color to use to draw the lenses annotations.
 	 */
 	public void setColor(Color color) {
-		this.color = color;
+		painter.setAnnotationTypeColor(CodeLensAnnotation.TYPE, color);
 	}
 
+	/**
+	 * Set the codelens providers.
+	 * 
+	 * @param codeLensProviders
+	 *            the codelens providers.
+	 */
 	public void setCodeLensProviders(ICodeLensProvider[] codeLensProviders) {
 		this.codeLensProviders = Arrays.asList(codeLensProviders);
 	}
@@ -146,22 +182,21 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		if (viewer == null || codeLensProviders == null || viewer.getAnnotationModel() == null) {
 			return;
 		}
-		// Initialize painet with lens drawing strategy.
-		initPainterIfNeeded();
 		// Cancel the last progress monitor to cancel last resolve and render of lenses
 		cancel();
 		// Refresh the lenses by using the new progress monitor.
 		monitor = new CodeLensMonitor();
-		refresh(monitor);
+		update(monitor);
 	}
 
 	/**
-	 * Refresh the lenses by using the given progress monitor.
+	 * Update the lenses by using the given progress monitor and stop process if
+	 * {@link IProgressMonitor#isCanceled()} is true.
 	 * 
 	 * @param monitor
 	 *            the progress monitor.
 	 */
-	private void refresh(final IProgressMonitor monitor) {
+	private void update(final IProgressMonitor monitor) {
 		// Collect the lenses for the viewer
 		getCodeLenses(viewer, codeLensProviders, monitor).thenAccept(symbols -> {
 			// check if request was canceled.
@@ -188,7 +223,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 							if (ann instanceof CodeLensAnnotation) {
 								// check if request was canceled.
 								monitor.isCanceled();
-								((CodeLensAnnotation) ann).redraw(viewer.getTextWidget());
+								((CodeLensAnnotation) ann).redraw();
 							}
 						}
 					});
@@ -206,8 +241,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			monitor.setCanceled(true);
 		}
 	}
-
-	// --------------- CodeLens providers methods utilities
 
 	/**
 	 * Return the list of {@link CompletableFuture} which provides the list of
@@ -264,8 +297,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 				Collectors.mapping(Function.identity(), Collectors.toList())));
 	}
 
-	// --------------- CodeLens renderer methods utilities
-
 	/**
 	 * Render the codelens grouped by line position.
 	 * 
@@ -292,6 +323,11 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		// Initialize annotations to delete with last annotations
 		List<Annotation> annotationsToRemove = codeLensAnnotations != null ? new ArrayList<>(codeLensAnnotations)
 				: Collections.emptyList();
+		// Retrieve the position of the first annotation on the last change
+		int firstLineIndex = -1;
+		if (codeLensAnnotations != null && !codeLensAnnotations.isEmpty()) {
+			firstLineIndex = codeLensAnnotations.get(0).getLineIndex();
+		}
 		List<CodeLensAnnotation> currentAnnotations = new ArrayList<>();
 		// Loop for grouped lenses
 		groups.entrySet().stream().forEach(g -> {
@@ -302,7 +338,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			CodeLensAnnotation ann = findExistingAnnotation(pos, annotationModel);
 			if (ann == null) {
 				// The annotation doesn't exists, create it.
-				ann = new CodeLensAnnotation(font);
+				ann = new CodeLensAnnotation(viewer, font);
 				annotationsToAdd.put(ann, pos);
 			} else {
 				// The annotation exists, remove it from the list to delete.
@@ -342,7 +378,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 					((IAnnotationModelExtension) annotationModel).replaceAnnotations(
 							annotationsToRemove.toArray(new Annotation[annotationsToRemove.size()]), annotationsToAdd);
 				} else {
-					removeColorSymbolAnnotations();
+					removeCodeLensAnnotations();
 					Iterator<Entry<Annotation, Position>> iter = annotationsToAdd.entrySet().iterator();
 					while (iter.hasNext()) {
 						Entry<Annotation, Position> mapEntry = iter.next();
@@ -353,36 +389,49 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			codeLensAnnotations = currentAnnotations;
 		}
 
+		if (!redraw(viewer, annotationsToRemove)) {
+			// Update top margin?
+			if (firstLineIndex == 0) {
+				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(-20));
+			} else {
+				if (!codeLensAnnotations.isEmpty()) {
+					if (codeLensAnnotations.get(0).getLineIndex() == 0) {
+						CodeLensUtilities.runInUIThread(viewer.getTextWidget(),
+								(text) -> text.setTopMargin(codeLensAnnotations.get(0).getHeight()));
+					}
+				}
+			}
+		}
+		return lensesToResolve;
+	}
+
+	private boolean redraw(ISourceViewer viewer, List<Annotation> annotationsToRemove) {
 		if (!annotationsToRemove.isEmpty()) {
 			CodeLensAnnotation ann = (CodeLensAnnotation) annotationsToRemove.get(0);
-			if (ann.isFirstLine(viewer.getTextWidget())) {
-				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(0));
+			if (ann.getLineIndex() == 0) {
+				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(0));
 			} else {
 				// redraw the styled text to hide old draw of annotations
-				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> {
+				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> {
 					text.redraw();
 					// update caret offset since line spacing has changed.
 					text.setCaretOffset(text.getCaretOffset());
 				});
 			}
 		}
-		if (!currentAnnotations.isEmpty()) {
-			CodeLensAnnotation ann = currentAnnotations.get(0);
-			if (ann.isFirstLine(viewer.getTextWidget())) {
-				CodeLensHelper.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(ann.getHeight()));
-			}
-		}
-
-		return lensesToResolve;
+		return false;
 	}
 
 	/**
-	 * Returns existing codelens annotation with the given position information and
-	 * null otherwise.
+	 * Returns the existing codelens annotation with the given position information
+	 * and null otherwise.
 	 * 
 	 * @param pos
+	 *            the position
 	 * @param annotationModel
-	 * @return
+	 *            the annotation model.
+	 * @return the existing codelens annotation with the given position information
+	 *         and null otherwise.
 	 */
 	private CodeLensAnnotation findExistingAnnotation(Position pos, IAnnotationModel annotationModel) {
 		if (codeLensAnnotations == null) {
@@ -394,34 +443,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			if (p != null && p.offset == pos.offset) {
 				return ann;
 			}
-		}
-		return null;
-	}
-
-	private static CodeLensAnnotation getCodeLensAnnotationAtLine(IAnnotationModel annotationModel, IDocument document,
-			int lineIndex) {
-		int lineNumber = lineIndex + 1;
-		if (lineNumber > document.getNumberOfLines()) {
-			return null;
-		}
-		try {
-			IRegion line = document.getLineInformation(lineNumber);
-			Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
-					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(),
-							line.getLength(), true, true)
-					: annotationModel.getAnnotationIterator();
-			while (iter.hasNext()) {
-				Annotation ann = iter.next();
-				if (ann instanceof CodeLensAnnotation) {
-					Position p = annotationModel.getPosition(ann);
-					if (p != null) {
-						if (p.overlapsWith(line.getOffset(), line.getLength())) {
-							return (CodeLensAnnotation) ann;
-						}
-					}
-				}
-			}
-		} catch (BadLocationException e) {
 		}
 		return null;
 	}
@@ -443,9 +464,9 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 	}
 
 	/**
-	 * 
+	 * Remove the codelens annotations.
 	 */
-	private void removeColorSymbolAnnotations() {
+	private void removeCodeLensAnnotations() {
 
 		IAnnotationModel annotationModel = viewer.getAnnotationModel();
 		if (annotationModel == null || codeLensAnnotations == null)
@@ -463,112 +484,13 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		}
 	}
 
-	// Painter initialisation utilities
-
-	private AnnotationPainter initPainterIfNeeded() {
-		if (painter != null) {
-			return painter;
-		}
-		return getAndInitAnnotationPainter();
-	}
-
-	private synchronized AnnotationPainter getAndInitAnnotationPainter() {
-		if (painter != null) {
-			return painter;
-		}
-		AnnotationPainter painter = getExistingAnnotationPainter(viewer);
-		if (painter == null) {
-			painter = createPainter(viewer);
-			((ITextViewerExtension2) viewer).addPainter(painter);
-		}
-		painter.addDrawingStrategy(CODELENS, CODELENS_STRATEGY);
-		painter.addAnnotationType(CodeLensAnnotation.TYPE, CODELENS);
-		painter.setAnnotationTypeColor(CodeLensAnnotation.TYPE, color);
-		this.painter = painter;
-		return painter;
-	}
-
-	protected AnnotationPainter createPainter(ISourceViewer textViewer) {
-		IAnnotationAccess annotationAccess = new IAnnotationAccess() {
-			public Object getType(Annotation annotation) {
-				return annotation.getType();
-			}
-
-			public boolean isMultiLine(Annotation annotation) {
-				return true;
-			}
-
-			public boolean isTemporary(Annotation annotation) {
-				return true;
-			}
-
-		};
-		return new AnnotationPainter(textViewer, annotationAccess);
-	}
-
 	/**
-	 * Retrieve the annotation painter used by the given text viewer.
-	 * 
-	 * @param viewer
-	 * @return
+	 * Returns the line spacing from the given line index with the codelens
+	 * annotations height and null otherwise.
 	 */
-	private static AnnotationPainter getExistingAnnotationPainter(ITextViewer viewer) {
-		// Here reflection is used, because
-		// - it doesn't exists API public for get AnnotationPainter used by the viewer.
-		// - it doesn't exists extension point to register custom drawing strategy. See
-		// https://bugs.eclipse.org/bugs/show_bug.cgi?id=51498
-		PaintManager paintManager = getFieldValue(viewer, "fPaintManager", TextViewer.class);
-		if (paintManager != null) {
-			List<IPainter> painters = getFieldValue(paintManager, "fPainters", PaintManager.class);
-			if (painters != null) {
-				for (IPainter painter : painters) {
-					if (painter instanceof AnnotationPainter) {
-						return (AnnotationPainter) painter;
-					}
-				}
-			}
-		}
-		return null;
-	}
-
-	private static <T> T getFieldValue(Object object, String name, Class clazz) {
-		Field f = getDeclaredField(clazz, name);
-		if (f != null) {
-			try {
-				return (T) f.get(object);
-			} catch (Exception e) {
-				return null;
-			}
-		}
-		return null;
-	}
-
-	private static Field getDeclaredField(Class clazz, String name) {
-		if (clazz == null) {
-			return null;
-		}
-		try {
-			Field f = clazz.getDeclaredField(name);
-			f.setAccessible(true);
-			return f;
-		} catch (NoSuchFieldException e) {
-			return getDeclaredField(clazz.getSuperclass(), name);
-		} catch (SecurityException e) {
-			return null;
-		}
-	}
-
 	@Override
 	public Integer getLineSpacing(int lineIndex) {
-		if (viewer == null) {
-			return null;
-		}
-		IAnnotationModel annotationModel = viewer.getAnnotationModel();
-		if (annotationModel == null) {
-			return null;
-		}
-		IDocument document = viewer.getDocument();
-		CodeLensAnnotation annotation = getCodeLensAnnotationAtLine(annotationModel, document, lineIndex);
+		CodeLensAnnotation annotation = CodeLensUtilities.getCodeLensAnnotationAtLine(viewer, lineIndex);
 		return annotation != null ? annotation.getHeight() : null;
 	}
 

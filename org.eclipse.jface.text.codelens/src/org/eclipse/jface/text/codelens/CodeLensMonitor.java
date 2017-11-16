@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - Provide CodeLens support - Bug XXXXXX
+ *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
  */
 package org.eclipse.jface.text.codelens;
 
@@ -16,9 +16,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 /**
- * Monitor which throws a {@link CancellationException} when
- * {@link IProgressMonitor#isCanceled()} is called.
+ * {@link IProgressMonitor} which throws a {@link CancellationException} when
+ * {@link IProgressMonitor#isCanceled()} is returns true.
  *
+ * @since 3.107
  */
 class CodeLensMonitor extends NullProgressMonitor {
 

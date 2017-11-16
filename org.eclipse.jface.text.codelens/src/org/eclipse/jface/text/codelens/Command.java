@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - Provide CodeLens support - Bug XXXXXX
+ *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
  */
 package org.eclipse.jface.text.codelens;
 
@@ -16,8 +16,9 @@ import java.util.List;
  * Represents a reference to a command. Provides a title which will be used to
  * represent a command in the UI and, optionally, an array of arguments which
  * will be passed to the command handler function when invoked.
+ * 
+ * @since 3.107
  */
-@SuppressWarnings("all")
 public class Command {
 	/**
 	 * Title of the command, like `save`.

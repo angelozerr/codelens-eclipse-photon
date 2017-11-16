@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - Provide CodeLens support - Bug XXXXXX
+ *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
  */
 package org.eclipse.jface.text.codelens;
 
@@ -24,6 +24,8 @@ import org.eclipse.swt.graphics.Point;
 /**
  * {@link IDrawingStrategy} implementation to render {@link CodeLensAnnotation}
  * composed with list of {@link ICodeLens} for a given line.
+ * 
+ * @since 3.107
  */
 public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
@@ -37,7 +39,8 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
 	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
-		if (annotation.isMarkedDeleted()) {			
+		if (annotation.isMarkedDeleted()) {
+			// Annotation was deleted, ignore the draw
 			return;
 		}
 		int lineIndex = -1;
@@ -49,7 +52,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 
 		if (gc != null) {
 			int lineOffset = textWidget.getOffsetAtLine(lineIndex)
-					+ CodeLensHelper.getLeadingSpaces(textWidget.getLine(lineIndex));
+					+ CodeLensUtilities.getLeadingSpaces(textWidget.getLine(lineIndex));
 			Point leftL = textWidget.getLocationAtOffset(lineOffset);
 
 			int y = 0;
@@ -79,7 +82,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 				// CodeLens has not changed, no need to refresh it
 				// FIXME: manage leading spaces (if leading spaces doens't changed, no need to
 				// refresh it too)
-				if (CodeLensHelper.getLeadingSpaces(textWidget.getLine(lineIndex)) == 0)
+				if (CodeLensUtilities.getLeadingSpaces(textWidget.getLine(lineIndex)) == 0)
 					return;
 			}
 			annotation.setText(text);

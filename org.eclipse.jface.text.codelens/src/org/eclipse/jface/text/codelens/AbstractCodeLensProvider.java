@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - Provide CodeLens support - Bug XXXXXX
+ *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
  */
 package org.eclipse.jface.text.codelens;
 
@@ -20,6 +20,7 @@ import org.eclipse.core.runtime.IAdaptable;
  * Clients may subclass.
  * </p>
  *
+ * @since 3.107
  */
 public abstract class AbstractCodeLensProvider implements ICodeLensProvider {
 
