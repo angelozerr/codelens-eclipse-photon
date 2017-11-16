@@ -25,7 +25,17 @@ public class CodeLensDemo {
 		shell.setText("CodeLens demo");
 
 		ISourceViewer sourceViewer = new SourceViewer(shell, null, SWT.V_SCROLL | SWT.BORDER);
-		sourceViewer.setDocument(new Document("class A"), new AnnotationModel());
+		sourceViewer.setDocument(new Document(
+				"// Type class & new keyword and see references CodeLens\n" +
+				"// Name class with a number N to emulate Nms before resolving the references CodeLens \n\n" +				
+				"class A\n" +
+				"new A\n" +
+				"new A\n\n" + 
+				"class 5\n" +
+				"new 5\n" +
+				"new 5\n" +
+				"new 5"
+				), new AnnotationModel());
 
 		AnnotationPainter painter = createAnnotationPainter(sourceViewer);
 		CodeLensManager manager = new CodeLensManager();
