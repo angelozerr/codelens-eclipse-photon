@@ -40,7 +40,11 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 	public static void draw(CodeLensAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
 		if (annotation.isMarkedDeleted()) {
-			// Annotation was deleted, ignore the draw
+			// When annotation is deleted, redraw the styled text to hide old draw of
+			// annotations
+			textWidget.redraw();
+			// update caret offset since line spacing has changed.
+			textWidget.setCaretOffset(textWidget.getCaretOffset());
 			return;
 		}
 		int lineIndex = -1;
@@ -61,6 +65,7 @@ public class CodeLensDrawingStrategy implements IDrawingStrategy {
 				int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
 				y = textWidget.getLocationAtOffset(previousOffset).y + annotation.getHeight();
 			}
+			
 			// Loop for codelens and render it
 			String text = getText(new ArrayList<>(annotation.getLenses()), annotation.getText());
 			gc.setForeground(color);

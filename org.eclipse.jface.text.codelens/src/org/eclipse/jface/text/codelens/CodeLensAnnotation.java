@@ -13,7 +13,6 @@ package org.eclipse.jface.text.codelens;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.ISourceViewer;
@@ -35,7 +34,6 @@ public class CodeLensAnnotation extends Annotation {
 	private final ISourceViewer viewer;
 	private final Font font;
 	private final List<ICodeLens> lenses;
-	private int lineIndex;
 
 	public CodeLensAnnotation(ISourceViewer viewer, Font font) {
 		super(TYPE, false, "");
@@ -55,12 +53,6 @@ public class CodeLensAnnotation extends Annotation {
 	public void update(List<ICodeLens> lenses) {
 		this.lenses.clear();
 		this.lenses.addAll(lenses);
-		try {
-			this.lineIndex = viewer.getDocument().getLineOfOffset(lenses.get(0).getPosition().getOffset());
-		} catch (BadLocationException e) {
-			this.lineIndex = -1;
-			e.printStackTrace();
-		}
 	}
 
 	/**
@@ -83,10 +75,6 @@ public class CodeLensAnnotation extends Annotation {
 	 */
 	public Font getFont() {
 		return font;
-	}
-
-	public int getLineIndex() {
-		return lineIndex;
 	}
 
 }

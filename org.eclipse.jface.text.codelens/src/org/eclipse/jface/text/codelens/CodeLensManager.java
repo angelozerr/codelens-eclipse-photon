@@ -323,11 +323,6 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 		// Initialize annotations to delete with last annotations
 		List<Annotation> annotationsToRemove = codeLensAnnotations != null ? new ArrayList<>(codeLensAnnotations)
 				: Collections.emptyList();
-		// Retrieve the position of the first annotation on the last change
-		int firstLineIndex = -1;
-		if (codeLensAnnotations != null && !codeLensAnnotations.isEmpty()) {
-			firstLineIndex = codeLensAnnotations.get(0).getLineIndex();
-		}
 		List<CodeLensAnnotation> currentAnnotations = new ArrayList<>();
 		// Loop for grouped lenses
 		groups.entrySet().stream().forEach(g -> {
@@ -388,38 +383,7 @@ public class CodeLensManager implements Runnable, StyledTextLineSpacingProvider 
 			}
 			codeLensAnnotations = currentAnnotations;
 		}
-
-		if (!redraw(viewer, annotationsToRemove)) {
-			// Update top margin?
-			if (firstLineIndex == 0) {
-				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(-20));
-			} else {
-				if (!codeLensAnnotations.isEmpty()) {
-					if (codeLensAnnotations.get(0).getLineIndex() == 0) {
-						CodeLensUtilities.runInUIThread(viewer.getTextWidget(),
-								(text) -> text.setTopMargin(codeLensAnnotations.get(0).getHeight()));
-					}
-				}
-			}
-		}
 		return lensesToResolve;
-	}
-
-	private boolean redraw(ISourceViewer viewer, List<Annotation> annotationsToRemove) {
-		if (!annotationsToRemove.isEmpty()) {
-			CodeLensAnnotation ann = (CodeLensAnnotation) annotationsToRemove.get(0);
-			if (ann.getLineIndex() == 0) {
-				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> text.setTopMargin(0));
-			} else {
-				// redraw the styled text to hide old draw of annotations
-				CodeLensUtilities.runInUIThread(viewer.getTextWidget(), (text) -> {
-					text.redraw();
-					// update caret offset since line spacing has changed.
-					text.setCaretOffset(text.getCaretOffset());
-				});
-			}
-		}
-		return false;
 	}
 
 	/**
