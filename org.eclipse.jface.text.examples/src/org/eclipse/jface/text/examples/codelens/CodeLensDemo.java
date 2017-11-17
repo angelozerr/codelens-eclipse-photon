@@ -1,4 +1,4 @@
-package org.eclipse.jface.text.codelens.samples;
+package org.eclipse.jface.text.examples.codelens;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextViewerExtension2;

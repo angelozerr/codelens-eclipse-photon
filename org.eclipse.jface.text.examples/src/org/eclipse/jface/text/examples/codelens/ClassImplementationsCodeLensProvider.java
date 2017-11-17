@@ -1,4 +1,4 @@
-package org.eclipse.jface.text.codelens.samples;
+package org.eclipse.jface.text.examples.codelens;
 
 import java.util.ArrayList;
 import java.util.List;
