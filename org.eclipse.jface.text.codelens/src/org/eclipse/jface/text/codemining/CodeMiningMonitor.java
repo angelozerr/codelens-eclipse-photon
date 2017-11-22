@@ -6,9 +6,9 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
  */
-package org.eclipse.jface.text.codelens;
+package org.eclipse.jface.text.codemining;
 
 import java.util.concurrent.CancellationException;
 
@@ -19,13 +19,13 @@ import org.eclipse.core.runtime.NullProgressMonitor;
  * {@link IProgressMonitor} which throws a {@link CancellationException} when
  * {@link IProgressMonitor#isCanceled()} is returns true.
  *
- * @since 3.107
+ * @since 3.13.0
  */
-class CodeLensMonitor extends NullProgressMonitor {
+class CodeMiningMonitor extends NullProgressMonitor {
 
 	@Override
 	public boolean isCanceled() {
-		boolean canceled = super.isCanceled();
+		boolean canceled= super.isCanceled();
 		if (canceled) {
 			throw new CancellationException();
 		}

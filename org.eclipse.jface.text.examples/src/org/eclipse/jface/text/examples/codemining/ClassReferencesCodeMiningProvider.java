@@ -1,4 +1,14 @@
-package org.eclipse.jface.text.examples.codelens;
+/**
+ *  Copyright (c) 2017 Angelo ZERR.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ */
+package org.eclipse.jface.text.examples.codemining;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,18 +18,18 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
-import org.eclipse.jface.text.codelens.AbstractSyncCodeLensProvider;
-import org.eclipse.jface.text.codelens.Command;
-import org.eclipse.jface.text.codelens.ICodeLens;
+import org.eclipse.jface.text.codemining.AbstractSyncCodeMiningProvider;
+import org.eclipse.jface.text.codemining.Command;
+import org.eclipse.jface.text.codemining.ICodeMining;
 
-public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvider {
+public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningProvider {
 
 	private Object lock = new Object();
 
 	@Override
-	protected List<? extends ICodeLens> provideSyncCodeLenses(ITextViewer viewer, IProgressMonitor monitor) {
+	protected List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
-		List<ICodeLens> lenses = new ArrayList<>();
+		List<ICodeMining> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();
 		for (int i = 0; i < lineCount; i++) {
 			String line = getLineText(document, i, false).trim();
@@ -28,7 +38,7 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 				String className = line.substring(index + "class ".length(), line.length()).trim();				
 				if (className.length() > 0) {
 					try {
-						lenses.add(new ClassCodeLens(className, i, document, this));
+						lenses.add(new ClassCodeMining(className, i, document, this));
 					} catch (BadLocationException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -40,9 +50,9 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 	}
 
 	@Override
-	protected ICodeLens resolveSyncCodeLens(ITextViewer viewer, ICodeLens codeLens, IProgressMonitor monitor) {
+	protected ICodeMining resolveSyncCodeMining(ITextViewer viewer, ICodeMining contentMining, IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
-		String className = ((ClassCodeLens) codeLens).getClassName();
+		String className = ((ClassCodeMining) contentMining).getClassName();
 		try {
 			int wait = Integer.parseInt(className);
 			try {
@@ -69,8 +79,8 @@ public class ClassReferencesCodeLensProvider extends AbstractSyncCodeLensProvide
 			String line = getLineText(document, i, false);
 			refCount += line.contains("new " + className) ? 1 : 0;
 		}
-		((ClassCodeLens) codeLens).setCommand(new Command(refCount + " references", ""));
-		return codeLens;
+		((ClassCodeMining) contentMining).setCommand(new Command(refCount + " references", ""));
+		return contentMining;
 	}
 
 	private static String getLineText(IDocument document, int line, boolean withLineDelimiter) {

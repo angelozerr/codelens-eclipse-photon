@@ -8,4 +8,6 @@ Export-Package: org.eclipse.ui.texteditor.codelens
 Require-Bundle: org.eclipse.jface.text,
  org.eclipse.core.runtime,
  org.eclipse.jface.text.codelens,
- org.eclipse.jface
+ org.eclipse.jface,
+ org.eclipse.ui.editors,
+ org.eclipse.ui.workbench

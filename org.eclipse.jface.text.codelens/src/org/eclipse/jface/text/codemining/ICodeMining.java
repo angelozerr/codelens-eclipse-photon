@@ -6,24 +6,24 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - CodeLens support - Bug 526969
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
  */
-package org.eclipse.jface.text.codelens;
+package org.eclipse.jface.text.codemining;
 
 import org.eclipse.jface.text.Position;
 
 /**
- * CodeLens API
+ * Code Mining API
  *
- * @since 3.107
+ * @since 3.13.0
  */
-public interface ICodeLens {
+public interface ICodeMining {
 
 	/**
-	 * Returns the line position where code lens must be displayed in the line
+	 * Returns the line position where content mining must be displayed in the line
 	 * spacing area.
 	 * 
-	 * @return the line position where code lens must be displayed in the line
+	 * @return the line position where content mining must be displayed in the line
 	 *         spacing area.
 	 */
 	Position getPosition();
@@ -36,16 +36,16 @@ public interface ICodeLens {
 	Command getCommand();
 
 	/**
-	 * Returns the codelens resolver and null otherwise.
+	 * Returns the content mining resolver and null otherwise.
 	 * 
-	 * @return the codelens resolver and null otherwise.
+	 * @return the content mining resolver and null otherwise.
 	 */
-	ICodeLensResolver getResolver();
+	ICodeMiningResolver getResolver();
 
 	/**
-	 * Returns true if the codelens is resolved and false otherwise.
+	 * Returns true if the content mining is resolved and false otherwise.
 	 * 
-	 * @return true if the codelens is resolved and false otherwise.
+	 * @return true if the content mining is resolved and false otherwise.
 	 */
 	boolean isResolved();
 }

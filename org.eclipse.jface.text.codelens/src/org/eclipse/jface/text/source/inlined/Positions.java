@@ -3,8 +3,9 @@ package org.eclipse.jface.text.source.inlined;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
+import org.eclipse.swt.custom.StyledText;
 
-class InlinedAnnotationUtilities {
+public class Positions {
 
 	/**
 	 * Returns the line position by taking care of leading spaces.
@@ -16,8 +17,7 @@ class InlinedAnnotationUtilities {
 	 * @return the line position by taking care of leading spaces.
 	 * @throws BadLocationException
 	 */
-	public static Position getPosition(int lineIndex, IDocument document, boolean leadingSpaces)
-			throws BadLocationException {
+	public static Position of(int lineIndex, IDocument document, boolean leadingSpaces) throws BadLocationException {
 		int offset = document.getLineOffset(lineIndex);
 		int lineLength = document.getLineLength(lineIndex);
 		String line = document.get(offset, lineLength);
@@ -25,6 +25,24 @@ class InlinedAnnotationUtilities {
 			offset += getLeadingSpaces(line);
 		}
 		return new Position(offset, 1);
+	}
+
+	/**
+	 * Returns the line position by taking care of leading spaces.
+	 * 
+	 * @param lineIndex
+	 *            the line index
+	 * @param document
+	 *            the document
+	 * @return the line position by taking care of leading spaces.
+	 */
+	public static int offset(int lineIndex, StyledText document, boolean leadingSpaces) {
+		int offset = document.getOffsetAtLine(lineIndex);
+		String line = document.getLine(lineIndex);
+		if (leadingSpaces) {
+			offset += getLeadingSpaces(line);
+		}
+		return offset;
 	}
 
 	/**
@@ -47,5 +65,4 @@ class InlinedAnnotationUtilities {
 		}
 		return counter;
 	}
-
 }

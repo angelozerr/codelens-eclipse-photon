@@ -63,7 +63,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 		Assert.isNotNull(painter);
 		fViewer = viewer;
 		fPainter = painter;
-		initPainter(painter);
+		initPainter();
 		StyledText text = fViewer.getTextWidget();
 		if (text == null || text.isDisposed()) {
 			return;
@@ -81,13 +81,10 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	/**
 	 * Initialize painter with code mining drawing strategy.
 	 * 
-	 * @param painter
-	 *            the annotation painter to initialize with code mining drawing
-	 *            strategy.
 	 */
-	private void initPainter(AnnotationPainter painter) {
-		painter.addDrawingStrategy(INLINED_STRATEGY_ID, INLINED_STRATEGY);
-		painter.addAnnotationType(InlinedAnnotation.TYPE, INLINED_STRATEGY_ID);
+	private void initPainter() {
+		fPainter.addDrawingStrategy(INLINED_STRATEGY_ID, INLINED_STRATEGY);
+		fPainter.addAnnotationType(InlinedAnnotation.TYPE, INLINED_STRATEGY_ID);
 	}
 
 	/**
@@ -133,13 +130,17 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 				annotationsToAdd.put(ann, ann.getPosition());
 			}
 		}
+		// Mark annotation as deleted to ignore the draw
+		for (Annotation ann : annotationsToRemove) {
+			ann.markDeleted(true);
+		}
 		// Update annotation model
 		synchronized (getLockObject(annotationModel)) {
 			if (annotationsToAdd.size() == 0 && annotationsToRemove.size() == 0) {
 				// None change, do nothing. Here the user could change position of codemining
 				// range
 				// (ex: user key press
-				// "Enter"), but we don't neeod to redraw the viewer because change of position
+				// "Enter"), but we don't need to redraw the viewer because change of position
 				// is done by AnnotationPainter.
 			} else {
 				if (annotationModel instanceof IAnnotationModelExtension) {
@@ -164,12 +165,10 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	 * 
 	 * @param pos
 	 *            the position
-	 * @param annotationModel
-	 *            the annotation model.
 	 * @return the existing codemining annotation with the given position
 	 *         information and null otherwise.
 	 */
-	public InlinedAnnotation findExistingAnnotation(Position pos, IAnnotationModel annotationModel) {
+	public InlinedAnnotation findExistingAnnotation(Position pos) {
 		if (fInlinedAnnotations == null) {
 			return null;
 		}
@@ -225,7 +224,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	@Override
 	public Integer getLineSpacing(int lineIndex) {
 		InlinedAnnotation annotation = getInlinedAnnotationAtLine(fViewer, lineIndex);
-		return annotation != null ? annotation.getHeight() : null;
+		return annotation != null && annotation.isShowAtBeforeLine() ? annotation.getHeight() : null;
 	}
 
 	/**
@@ -273,28 +272,5 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 			return null;
 		}
 		return null;
-	}
-
-	public Position getPosition(int lineIndex) throws BadLocationException {
-		return getPosition(lineIndex, false);
-	}
-
-	/**
-	 * Returns the line position by taking care of leading spaces.
-	 * 
-	 * @param lineIndex
-	 *            the line index
-	 * @param document
-	 *            the document
-	 * @return the line position by taking care of leading spaces.
-	 * @throws BadLocationException
-	 */
-	public Position getPosition(int lineIndex, boolean leadingSpaces) throws BadLocationException {
-		IDocument document = fViewer != null ? fViewer.getDocument() : null;
-		if (document == null) {
-			// this case comes from when editor is closed before rendered is done.
-			return null;
-		}
-		return InlinedAnnotationUtilities.getPosition(lineIndex, document, leadingSpaces);
 	}
 }
