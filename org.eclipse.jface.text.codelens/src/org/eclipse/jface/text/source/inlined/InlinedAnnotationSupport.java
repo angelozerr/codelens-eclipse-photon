@@ -1,3 +1,13 @@
+/**
+ *  Copyright (c) 2017 Angelo ZERR.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide inline annotations support - Bug 527675
+ */
 package org.eclipse.jface.text.source.inlined;
 
 import java.util.ArrayList;
@@ -9,7 +19,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
+import org.eclipse.swt.graphics.Color;
+
 import org.eclipse.core.runtime.Assert;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
@@ -22,25 +39,28 @@ import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.jface.text.source.IAnnotationModelExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyleRange;
-import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 
+/**
+ * Support to draw inlined annotations:
+ * 
+ * <ul>
+ * <li>block annotation with {@link BlockAnnotation}.</li>
+ * <li>inline annotation with {@link InlineAnnotation}.</li>
+ * </ul>
+ * 
+ * @since 3.13.0
+ */
 public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
-	 * The annotation codemining strategy singleton.
+	 * The annotation inlined strategy singleton.
 	 */
-	private static final IDrawingStrategy INLINED_STRATEGY = new InlinedAnnotationDrawingStrategy();
+	private static final IDrawingStrategy INLINED_STRATEGY= new InlinedAnnotationDrawingStrategy();
 
 	/**
-	 * The annotation codemining strategy ID.
+	 * The annotation inlined strategy ID.
 	 */
-	private static final String INLINED_STRATEGY_ID = "inlined"; //$NON-NLS-1$
+	private static final String INLINED_STRATEGY_ID= "inlined"; //$NON-NLS-1$
 
 	/**
 	 * The source viewer
@@ -53,35 +73,32 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	private AnnotationPainter fPainter;
 
 	/**
-	 * The font to use to draw the code minings annotations.
+	 * Holds the current inlined annotations.
 	 */
-	private Font fFont;
-
 	private Set<InlinedAnnotation> fInlinedAnnotations;
 
+	/**
+	 * Install the inlined annotation support for the given viewer.
+	 * 
+	 * @param viewer the source viewer
+	 * @param painter the annotation painter to use to draw the inlined annotations.
+	 */
 	public void install(ISourceViewer viewer, AnnotationPainter painter) {
 		Assert.isNotNull(viewer);
 		Assert.isNotNull(painter);
-		fViewer = viewer;
-		fPainter = painter;
+		fViewer= viewer;
+		fPainter= painter;
 		initPainter();
-		StyledText text = fViewer.getTextWidget();
+		StyledText text= fViewer.getTextWidget();
 		if (text == null || text.isDisposed()) {
 			return;
 		}
-		// Initialize defaut code mining font and color.
-		FontData[] fds = text.getFont().getFontData();
-		for (int i = 0; i < fds.length; i++) {
-			fds[i].setStyle(fds[i].getStyle() | SWT.ITALIC);
-		}
-		setFont(new Font(text.getDisplay(), fds));
 		setColor(text.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 		text.setLineSpacingProvider(this);
 	}
 
 	/**
-	 * Initialize painter with code mining drawing strategy.
-	 * 
+	 * Initialize painter with inlined drawing strategy.
 	 */
 	private void initPainter() {
 		fPainter.addDrawingStrategy(INLINED_STRATEGY_ID, INLINED_STRATEGY);
@@ -89,65 +106,77 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	}
 
 	/**
-	 * Set the font to use to draw the code minings annotations.
+	 * Set the color to use to draw the inlined annotations.
 	 * 
-	 * @param font
-	 *            the font to use to draw the code minings annotations.
-	 */
-	public void setFont(Font font) {
-		this.fFont = font;
-	}
-
-	/**
-	 * Set the color to use to draw the code minings annotations.
-	 * 
-	 * @param color
-	 *            the color to use to draw the code minings annotations.
+	 * @param color the color to use to draw the inlined annotations.
 	 */
 	public void setColor(Color color) {
 		fPainter.setAnnotationTypeColor(InlinedAnnotation.TYPE, color);
 	}
 
+	/**
+	 * Unisntall the inlined annotation support
+	 */
 	public void uninstall() {
-		fViewer = null;
-		fPainter = null;
+		fViewer= null;
+		fPainter= null;
 	}
 
+	/**
+	 * Update the given inlined annotation.
+	 * 
+	 * @param annotations the inlined annotation.
+	 */
 	public void updateAnnotations(Set<InlinedAnnotation> annotations) {
-		IDocument document = fViewer != null ? fViewer.getDocument() : null;
+		IDocument document= fViewer != null ? fViewer.getDocument() : null;
 		if (document == null) {
 			// this case comes from when editor is closed before rendered is done.
 			return;
 		}
-		IAnnotationModel annotationModel = fViewer.getAnnotationModel();
+		IAnnotationModel annotationModel= fViewer.getAnnotationModel();
 		if (annotationModel == null) {
 			return;
 		}
-		StyledText styledText = fViewer.getTextWidget();
-		Map<InlinedAnnotation, Position> annotationsToAdd = new HashMap<>();
-		List<InlinedAnnotation> annotationsToRemove = fInlinedAnnotations != null ? new ArrayList<>(fInlinedAnnotations)
+		StyledText styledText= fViewer.getTextWidget();
+		Map<InlinedAnnotation, Position> annotationsToAdd= new HashMap<>();
+		List<InlinedAnnotation> annotationsToRemove= fInlinedAnnotations != null
+				? new ArrayList<>(fInlinedAnnotations)
 				: Collections.emptyList();
+		// Loop for annotations to update
 		for (InlinedAnnotation ann : annotations) {
 			if (!annotationsToRemove.remove(ann)) {
+				// The annotation was not created, add it
 				annotationsToAdd.put(ann, ann.getPosition());
 			}
-			if (!ann.isShowAtBeforeLine()) {
-				StyleRange s = new StyleRange();
-				s.start = ann.getPosition().getOffset();
-				s.length = 1;
-				s.metrics = ann.createGlyphMetrics(styledText);
-				styledText.setStyleRange(s);
+			if (ann instanceof InlineAnnotation) {
+				// Create metrics with well width to add space where the inline annotation must
+				// b edrawn.
+				StyleRange s= new StyleRange();
+				s.start= ann.getPosition().getOffset();
+				s.length= 1;
+				s.metrics= ((InlineAnnotation) ann).createMetrics();
+				try {
+					styledText.setStyleRange(s);
+				} catch (IllegalArgumentException e) {
+					// Do nothing
+				}
 			}
 		}
-		// Mark annotation as deleted to ignore the draw
+		// Process annotations to remove
 		for (InlinedAnnotation ann : annotationsToRemove) {
+			// Mark annotation as deleted to ignore the draw
 			ann.markDeleted(true);
-			if (!ann.isShowAtBeforeLine()) {
-				StyleRange s = new StyleRange();
-				s.start = ann.getPosition().getOffset();
-				s.length = 1;
-				s.metrics = null;
-				styledText.setStyleRange(s);
+			if (ann instanceof InlineAnnotation) {
+				// Set metrics to null to remove space of the inline annotation
+				StyleRange s= new StyleRange();
+				s.start= ann.getPosition().getOffset();
+				s.length= 1;
+				s.metrics= null;
+				try {
+					styledText.setStyleRange(s);
+				} catch (IllegalArgumentException e) {
+					// Do nothing
+				}
 			}
 		}
 		// Update annotation model
@@ -164,33 +193,37 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 							annotationsToRemove.toArray(new Annotation[annotationsToRemove.size()]), annotationsToAdd);
 				} else {
 					removeInlinedAnnotations();
-					Iterator<Entry<InlinedAnnotation, Position>> iter = annotationsToAdd.entrySet().iterator();
+					Iterator<Entry<InlinedAnnotation, Position>> iter= annotationsToAdd.entrySet().iterator();
 					while (iter.hasNext()) {
-						Entry<InlinedAnnotation, Position> mapEntry = iter.next();
+						Entry<InlinedAnnotation, Position> mapEntry= iter.next();
 						annotationModel.addAnnotation(mapEntry.getKey(), mapEntry.getValue());
 					}
 				}
 			}
-			fInlinedAnnotations = annotations;
+			fInlinedAnnotations= annotations;
 		}
 	}
 
 	/**
-	 * Returns the existing codemining annotation with the given position
-	 * information and null otherwise.
+	 * Returns the existing codemining annotation with the given position information and null
+	 * otherwise.
 	 * 
-	 * @param pos
-	 *            the position
-	 * @return the existing codemining annotation with the given position
-	 *         information and null otherwise.
+	 * @param pos the position
+	 * @return the existing codemining annotation with the given position information and null
+	 *         otherwise.
 	 */
-	public InlinedAnnotation findExistingAnnotation(Position pos) {
+	@SuppressWarnings("unchecked")
+	public <T extends InlinedAnnotation> T findExistingAnnotation(Position pos) {
 		if (fInlinedAnnotations == null) {
 			return null;
 		}
 		for (InlinedAnnotation ann : fInlinedAnnotations) {
 			if (ann.getPosition().offset == pos.offset) {
-				return ann;
+				try {
+					return (T) ann;
+				} catch (ClassCastException e) {
+					// Do nothing
+				}
 			}
 		}
 		return null;
@@ -199,13 +232,12 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	/**
 	 * Returns the lock object for the given annotation model.
 	 *
-	 * @param annotationModel
-	 *            the annotation model
+	 * @param annotationModel the annotation model
 	 * @return the annotation model's lock object
 	 */
 	private Object getLockObject(IAnnotationModel annotationModel) {
 		if (annotationModel instanceof ISynchronizable) {
-			Object lock = ((ISynchronizable) annotationModel).getLockObject();
+			Object lock= ((ISynchronizable) annotationModel).getLockObject();
 			if (lock != null)
 				return lock;
 		}
@@ -213,11 +245,11 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	}
 
 	/**
-	 * Remove the codemining annotations.
+	 * Remove the inlined annotations.
 	 */
 	private void removeInlinedAnnotations() {
 
-		IAnnotationModel annotationModel = fViewer.getAnnotationModel();
+		IAnnotationModel annotationModel= fViewer.getAnnotationModel();
 		if (annotationModel == null || fInlinedAnnotations == null)
 			return;
 
@@ -229,55 +261,53 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 				for (InlinedAnnotation annotation : fInlinedAnnotations)
 					annotationModel.removeAnnotation(annotation);
 			}
-			fInlinedAnnotations = null;
+			fInlinedAnnotations= null;
 		}
 	}
 
 	/**
-	 * Returns the line spacing from the given line index with the codemining
-	 * annotations height and null otherwise.
+	 * Returns the line spacing from the given line index with the codemining annotations height and
+	 * null otherwise.
 	 */
+	@SuppressWarnings("boxing")
 	@Override
 	public Integer getLineSpacing(int lineIndex) {
-		InlinedAnnotation annotation = getInlinedAnnotationAtLine(fViewer, lineIndex);
-		return annotation != null && annotation.isShowAtBeforeLine() ? annotation.getHeight(fViewer.getTextWidget())
+		InlinedAnnotation annotation= getInlinedAnnotationAtLine(fViewer, lineIndex);
+		return (annotation instanceof BlockAnnotation)
+				? ((BlockAnnotation) annotation).getHeight()
 				: null;
 	}
 
 	/**
-	 * Returns the {@link InlinedAnnotation} from the given line index and null
-	 * otherwise.
+	 * Returns the {@link InlinedAnnotation} from the given line index and null otherwise.
 	 * 
-	 * @param viewer
-	 *            the source viewer
-	 * @param lineIndex
-	 *            the line index.
-	 * @return the {@link InlinedAnnotation} from the given line index and null
-	 *         otherwise.
+	 * @param viewer the source viewer
+	 * @param lineIndex the line index.
+	 * @return the {@link InlinedAnnotation} from the given line index and null otherwise.
 	 */
 	public static InlinedAnnotation getInlinedAnnotationAtLine(ISourceViewer viewer, int lineIndex) {
 		if (viewer == null) {
 			return null;
 		}
-		IAnnotationModel annotationModel = viewer.getAnnotationModel();
+		IAnnotationModel annotationModel= viewer.getAnnotationModel();
 		if (annotationModel == null) {
 			return null;
 		}
-		IDocument document = viewer.getDocument();
-		int lineNumber = lineIndex + 1;
+		IDocument document= viewer.getDocument();
+		int lineNumber= lineIndex + 1;
 		if (lineNumber > document.getNumberOfLines()) {
 			return null;
 		}
 		try {
-			IRegion line = document.getLineInformation(lineNumber);
-			Iterator<Annotation> iter = (annotationModel instanceof IAnnotationModelExtension2)
+			IRegion line= document.getLineInformation(lineNumber);
+			Iterator<Annotation> iter= (annotationModel instanceof IAnnotationModelExtension2)
 					? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(line.getOffset(),
 							line.getLength(), true, true)
 					: annotationModel.getAnnotationIterator();
 			while (iter.hasNext()) {
-				Annotation ann = iter.next();
+				Annotation ann= iter.next();
 				if (ann instanceof InlinedAnnotation) {
-					Position p = annotationModel.getPosition(ann);
+					Position p= annotationModel.getPosition(ann);
 					if (p != null) {
 						if (p.overlapsWith(line.getOffset(), line.getLength())) {
 							return (InlinedAnnotation) ann;

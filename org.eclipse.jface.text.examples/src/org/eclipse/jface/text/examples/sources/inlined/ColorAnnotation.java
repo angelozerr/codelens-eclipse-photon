@@ -1,28 +1,34 @@
+/**
+ *  Copyright (c) 2017 Angelo ZERR.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide inline annotations support - Bug 527675
+ */
 package org.eclipse.jface.text.examples.sources.inlined;
 
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.inlined.InlinedAnnotation;
+import org.eclipse.jface.text.source.inlined.InlineAnnotation;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
 
-public class ColorAnnotation extends InlinedAnnotation {
+public class ColorAnnotation extends InlineAnnotation {
 
 	private Color color;
 
-	public ColorAnnotation(Position pos) {
-		super(pos, false);
+	public ColorAnnotation(Position pos, StyledText styledText) {
+		super(pos, styledText);
 	}
 
 	@Override
-	public Integer getHeight(StyledText styledText) {
-		return null;
-	}
-
-	@Override
-	public Integer getWidth(StyledText styledText) {
+	public int getWidth() {
+		StyledText styledText = super.getTextWidget();
 		return getSquareWidth(styledText);
 	}
 

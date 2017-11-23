@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide inline annotations support - Bug 527675
  */
 package org.eclipse.jface.text.examples.sources.inlined;
 
@@ -37,7 +37,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 /**
- * A Code Mining demo with class references, implementations.
+ * An inlined demo with block and inline annotations.
  *
  */
 public class InlinedAnnotationDemo {
@@ -111,21 +111,21 @@ public class InlinedAnnotationDemo {
 					}
 					// Status color annotation
 					Position pos = Positions.of(i, document, true);
-					InlinedAnnotation statusAnnotation = support.findExistingAnnotation(pos);
+					ColorStatusAnnotation statusAnnotation = support.findExistingAnnotation(pos);
 					if (statusAnnotation == null) {
-						statusAnnotation = new ColorStatusAnnotation(pos);
+						statusAnnotation = new ColorStatusAnnotation(pos, viewer.getTextWidget());
 					}
-					((ColorStatusAnnotation)statusAnnotation).setStatus(status);
+					statusAnnotation.setStatus(status);
 					annotations.add(statusAnnotation);
 
 					// Color annotation
 					if (color != null) {
 						Position colorPos = new Position(pos.offset + index + "color:".length(), rgb.length());
-						InlinedAnnotation colorAnnotation = support.findExistingAnnotation(colorPos);
+						ColorAnnotation colorAnnotation = support.findExistingAnnotation(colorPos);
 						if (colorAnnotation == null) {
-							colorAnnotation = new ColorAnnotation(colorPos);
+							colorAnnotation = new ColorAnnotation(colorPos, viewer.getTextWidget());
 						}
-						((ColorAnnotation)colorAnnotation).setColor(color);
+						colorAnnotation.setColor(color);
 						annotations.add(colorAnnotation);
 					}
 
@@ -142,11 +142,14 @@ public class InlinedAnnotationDemo {
 		Matcher m = c.matcher(input);
 
 		if (m.matches()) {
-			return new Color(device, Integer.valueOf(m.group(1)), // r
-					Integer.valueOf(m.group(2)), // g
-					Integer.valueOf(m.group(3))); // b
-		}
+			try {
+				return new Color(device, Integer.valueOf(m.group(1)), // r
+						Integer.valueOf(m.group(2)), // g
+						Integer.valueOf(m.group(3))); // b
+			} catch (Exception e) {
 
+			}
+		}
 		return null;
 	}
 
