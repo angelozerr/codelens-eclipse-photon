@@ -13,24 +13,19 @@ package org.eclipse.jface.text.codemining;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.inlined.InlinedAnnotation;
+import org.eclipse.jface.text.source.inlined.InlinedAnnotationDrawingStrategy;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
-
-import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.Annotation;
-import org.eclipse.jface.text.source.ISourceViewer;
 
 /**
  * Code Mining annotation.
  *
  * @since 3.13.0
  */
-public class CodeMiningAnnotation extends Annotation {
-
-	/**
-	 * The type of codemining annotations.
-	 */
-	public static final String TYPE= "org.eclipse.jface.text.codemining"; //$NON-NLS-1$
+public class CodeMiningAnnotation extends InlinedAnnotation {
 
 	private final ISourceViewer fViewer;
 
@@ -38,19 +33,25 @@ public class CodeMiningAnnotation extends Annotation {
 
 	private final List<ICodeMining> fMinings;
 
-	public CodeMiningAnnotation(ISourceViewer viewer, Font font) {
-		super(TYPE, false, ""); //$NON-NLS-1$
-		fViewer= viewer;
-		fFont= font;
-		fMinings= new ArrayList<>();
+	public CodeMiningAnnotation(Position position, ISourceViewer viewer, Font font) {
+		super(position, true);
+		fViewer = viewer;
+		fFont = font;
+		fMinings = new ArrayList<>();
 	}
 
 	public List<ICodeMining> getMininges() {
 		return fMinings;
 	}
 
-	public int getHeight() {
+	@Override
+	public Integer getHeight(StyledText styledText) {
 		return 20;
+	}
+
+	@Override
+	public Integer getWidth(StyledText styledText) {
+		return null;
 	}
 
 	public void update(List<ICodeMining> minings) {
@@ -62,11 +63,11 @@ public class CodeMiningAnnotation extends Annotation {
 	 * Redraw the codemining annotation.
 	 */
 	public void redraw() {
-		StyledText text= fViewer.getTextWidget();
+		StyledText text = fViewer.getTextWidget();
 		CodeMiningUtilities.runInUIThread(text, (t) -> {
-			Position pos= getMininges().get(0).getPosition();
+			Position pos = getMininges().get(0).getPosition();
 			if (pos != null) {
-				CodeMiningDrawingStrategy.draw(this, null, t, pos.getOffset(), pos.getLength(), null);
+				InlinedAnnotationDrawingStrategy.draw(this, null, t, pos.getOffset(), pos.getLength(), null);
 			}
 		});
 	}
@@ -80,4 +81,29 @@ public class CodeMiningAnnotation extends Annotation {
 		return fFont;
 	}
 
+	@Override
+	public String getText() {
+		String oldText = super.getText();
+		super.setText(getText(new ArrayList<>(getMininges()), oldText));
+		return super.getText();
+	}
+	
+	private static String getText(List<ICodeMining> minings, String oldText) {
+		StringBuilder text= new StringBuilder();
+		for (ICodeMining codeMining : minings) {
+			if (!codeMining.isResolved()) {
+				// Don't render codemining which is not resolved.
+				if (oldText != null) {
+					return oldText;
+				}
+				continue;
+			}
+			if (text.length() > 0) {
+				text.append(" | "); //$NON-NLS-1$
+			}
+			String title= codeMining.getCommand() != null ? codeMining.getCommand().getTitle() : "no command"; //$NON-NLS-1$
+			text.append(title);
+		}
+		return text.toString();
+	}
 }

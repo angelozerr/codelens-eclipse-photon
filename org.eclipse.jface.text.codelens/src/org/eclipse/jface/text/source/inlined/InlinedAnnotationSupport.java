@@ -23,6 +23,7 @@ import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.jface.text.source.IAnnotationModelExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
 import org.eclipse.swt.graphics.Color;
@@ -34,7 +35,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	/**
 	 * The annotation codemining strategy singleton.
 	 */
-	private static final IDrawingStrategy INLINED_STRATEGY = new InlinedDrawingStrategy();
+	private static final IDrawingStrategy INLINED_STRATEGY = new InlinedAnnotationDrawingStrategy();
 
 	/**
 	 * The annotation codemining strategy ID.
@@ -122,6 +123,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 		if (annotationModel == null) {
 			return;
 		}
+		StyledText styledText = fViewer.getTextWidget();
 		Map<InlinedAnnotation, Position> annotationsToAdd = new HashMap<>();
 		List<InlinedAnnotation> annotationsToRemove = fInlinedAnnotations != null ? new ArrayList<>(fInlinedAnnotations)
 				: Collections.emptyList();
@@ -129,10 +131,24 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 			if (!annotationsToRemove.remove(ann)) {
 				annotationsToAdd.put(ann, ann.getPosition());
 			}
+			if (!ann.isShowAtBeforeLine()) {
+				StyleRange s = new StyleRange();
+				s.start = ann.getPosition().getOffset();
+				s.length = 1;
+				s.metrics = ann.createGlyphMetrics(styledText);
+				styledText.setStyleRange(s);
+			}
 		}
 		// Mark annotation as deleted to ignore the draw
-		for (Annotation ann : annotationsToRemove) {
+		for (InlinedAnnotation ann : annotationsToRemove) {
 			ann.markDeleted(true);
+			if (!ann.isShowAtBeforeLine()) {
+				StyleRange s = new StyleRange();
+				s.start = ann.getPosition().getOffset();
+				s.length = 1;
+				s.metrics = null;
+				styledText.setStyleRange(s);
+			}
 		}
 		// Update annotation model
 		synchronized (getLockObject(annotationModel)) {
@@ -224,7 +240,8 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	@Override
 	public Integer getLineSpacing(int lineIndex) {
 		InlinedAnnotation annotation = getInlinedAnnotationAtLine(fViewer, lineIndex);
-		return annotation != null && annotation.isShowAtBeforeLine() ? annotation.getHeight() : null;
+		return annotation != null && annotation.isShowAtBeforeLine() ? annotation.getHeight(fViewer.getTextWidget())
+				: null;
 	}
 
 	/**

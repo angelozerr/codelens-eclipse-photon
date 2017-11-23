@@ -9,14 +9,14 @@ import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
 
-public class InlinedDrawingStrategy implements IDrawingStrategy {
+public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 
 	@Override
 	public void draw(Annotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
 		if (!(annotation instanceof InlinedAnnotation)) {
 			return;
 		}
-		InlinedDrawingStrategy.draw((InlinedAnnotation) annotation, gc, textWidget, offset, length, color);
+		InlinedAnnotationDrawingStrategy.draw((InlinedAnnotation) annotation, gc, textWidget, offset, length, color);
 	}
 
 	public static void draw(InlinedAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
@@ -51,11 +51,15 @@ public class InlinedDrawingStrategy implements IDrawingStrategy {
 			int y = 0;
 			if (lineIndex > 0) {
 				int previousOffset = textWidget.getOffsetAtLine(previousLineIndex);
-				y = textWidget.getLocationAtOffset(previousOffset).y + annotation.getHeight();
+				y = textWidget.getLocationAtOffset(previousOffset).y + annotation.getHeight(textWidget);
 			}
 			if (gc.getClipping().contains(x, y)) {
 				annotation.draw(gc, textWidget, offset, length, color, x, y);
 				return;
+			} else {
+				if (!annotation.isDirty()) {
+					return;
+				}
 			}
 		}
 

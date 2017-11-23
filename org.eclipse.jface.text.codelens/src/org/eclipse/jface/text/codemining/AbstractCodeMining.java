@@ -13,6 +13,7 @@ package org.eclipse.jface.text.codemining;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.source.inlined.Positions;
 
 /**
  * Abstract class for {@link ICodeMining}.
@@ -59,7 +60,7 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 */
 	public AbstractCodeMining(int beforeLineNumber, IDocument document, ICodeMiningResolver resolver)
 			throws BadLocationException {
-		this.position= CodeMiningUtilities.getPosition(beforeLineNumber, document);
+		this.position= Positions.of(beforeLineNumber, document, true);
 		this.resolver= resolver;
 	}
 

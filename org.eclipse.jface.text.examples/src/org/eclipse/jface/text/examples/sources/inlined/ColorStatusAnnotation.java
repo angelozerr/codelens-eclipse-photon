@@ -2,6 +2,7 @@ package org.eclipse.jface.text.examples.sources.inlined;
 
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotation;
+import org.eclipse.swt.custom.StyledText;
 
 public class ColorStatusAnnotation extends InlinedAnnotation {
 
@@ -10,12 +11,12 @@ public class ColorStatusAnnotation extends InlinedAnnotation {
 	}
 
 	@Override
-	public Integer getHeight() {
+	public Integer getHeight(StyledText styledText) {
 		return 20;
 	}
 
 	@Override
-	public Integer getWidth() {
+	public Integer getWidth(StyledText styledText) {
 		return null;
 	}
 	
