@@ -39,11 +39,6 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 		return fMinings;
 	}
 
-	@Override
-	public int getHeight() {
-		return 20;
-	}
-
 	public void update(List<ICodeMining> minings) {
 		fMinings.clear();
 		fMinings.addAll(minings);

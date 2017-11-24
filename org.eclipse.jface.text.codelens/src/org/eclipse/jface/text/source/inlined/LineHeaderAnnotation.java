@@ -11,8 +11,6 @@
 package org.eclipse.jface.text.source.inlined;
 
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.graphics.FontMetrics;
-import org.eclipse.swt.graphics.GC;
 
 import org.eclipse.jface.text.Position;
 
@@ -34,17 +32,13 @@ public class LineHeaderAnnotation extends AbstractInlinedAnnotation {
 	}
 
 	/**
-	 * Returns the annotation height. By default the height used is the height of the font.
+	 * Returns the annotation height. By default, returns the {@link StyledText#getLineHeight()}.
 	 *
 	 * @return the annotation height.
 	 */
 	public int getHeight() {
 		StyledText styledText= super.getTextWidget();
-		GC gc= new GC(styledText);
-		FontMetrics fontMetrics= gc.getFontMetrics();
-		int height= fontMetrics.getHeight();
-		gc.dispose();
-		return height;
+		return styledText.getLineHeight();
 	}
 
 }
