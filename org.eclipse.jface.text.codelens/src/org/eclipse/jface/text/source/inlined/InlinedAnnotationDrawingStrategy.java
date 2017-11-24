@@ -96,8 +96,9 @@ class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 			Rectangle clipping= gc.getClipping();
 			if (clipping.contains(x, y)) {
 				// GC clipping contains the x, y where annotation must be drawn.
-
+				
 				// Colorize line spacing area with the background of StyledText to avoid having highlighted line color
+				gc.setBackground(textWidget.getBackground());
 				Rectangle client= textWidget.getClientArea();
 				textWidget.drawBackground(gc, x, y, client.width, height);
 
