@@ -18,15 +18,19 @@ import java.util.regex.Pattern;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.reconciler.DirtyRegion;
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
+import org.eclipse.jface.text.reconciler.MonoReconciler;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.jface.text.source.AnnotationPainter;
 import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.jface.text.source.inlined.InlinedAnnotation;
+import org.eclipse.jface.text.source.inlined.AbstractInlinedAnnotation;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
 import org.eclipse.jface.text.source.inlined.Positions;
 import org.eclipse.swt.SWT;
@@ -56,13 +60,28 @@ public class InlinedAnnotationDemo {
 		InlinedAnnotationSupport support = new InlinedAnnotationSupport();
 		support.install(sourceViewer, createAnnotationPainter(sourceViewer));
 
-		Set<InlinedAnnotation> annotations = getInlinedAnnotation(sourceViewer, support);
-		support.updateAnnotations(annotations);
-
-		sourceViewer.getTextWidget().addModifyListener(e -> {
-			Set<InlinedAnnotation> anns = getInlinedAnnotation(sourceViewer, support);
-			support.updateAnnotations(anns);
-		});
+		MonoReconciler reconciler = new MonoReconciler(new IReconcilingStrategy() {
+			
+			@Override
+			public void setDocument(IDocument document) {
+				Set<AbstractInlinedAnnotation> annotations = getInlinedAnnotation(sourceViewer, support);
+				support.updateAnnotations(annotations);		
+			}
+			
+			@Override
+			public void reconcile(IRegion partition) {
+				Set<AbstractInlinedAnnotation> anns = getInlinedAnnotation(sourceViewer, support);
+				support.updateAnnotations(anns);	
+			}
+			
+			@Override
+			public void reconcile(DirtyRegion dirtyRegion, IRegion subRegion) {
+			
+			}
+		}, false);
+		reconciler.setDelay(1);
+		reconciler.install(sourceViewer);
+		
 
 		// shell.pack();
 		shell.open();
@@ -93,9 +112,9 @@ public class InlinedAnnotationDemo {
 		return painter;
 	}
 
-	private static Set<InlinedAnnotation> getInlinedAnnotation(ISourceViewer viewer, InlinedAnnotationSupport support) {
+	private static Set<AbstractInlinedAnnotation> getInlinedAnnotation(ISourceViewer viewer, InlinedAnnotationSupport support) {
 		IDocument document = viewer.getDocument();
-		Set<InlinedAnnotation> annotations = new HashSet<>();
+		Set<AbstractInlinedAnnotation> annotations = new HashSet<>();
 		int lineCount = document.getNumberOfLines();
 		for (int i = 0; i < lineCount; i++) {
 			String line = getLineText(document, i, false).trim();

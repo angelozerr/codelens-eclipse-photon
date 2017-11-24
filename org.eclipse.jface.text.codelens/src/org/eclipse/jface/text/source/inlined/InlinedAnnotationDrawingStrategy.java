@@ -22,7 +22,7 @@ import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy;
 
 /**
- * {@link IDrawingStrategy} implementation to render {@link InlinedAnnotation}.
+ * {@link IDrawingStrategy} implementation to render {@link AbstractInlinedAnnotation}.
  * 
  * @since 3.13.0
  */
@@ -30,10 +30,10 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 
 	@Override
 	public void draw(Annotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
-		if (!(annotation instanceof InlinedAnnotation)) {
+		if (!(annotation instanceof AbstractInlinedAnnotation)) {
 			return;
 		}
-		InlinedAnnotationDrawingStrategy.draw((InlinedAnnotation) annotation, gc, textWidget, offset, length, color);
+		InlinedAnnotationDrawingStrategy.draw((AbstractInlinedAnnotation) annotation, gc, textWidget, offset, length, color);
 	}
 
 	/**
@@ -46,7 +46,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 	 * @param length the length of the line
 	 * @param color the color of the line
 	 */
-	public static void draw(InlinedAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
+	public static void draw(AbstractInlinedAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
 		if (annotation.isMarkedDeleted()) {
 			// When annotation is deleted, redraw the styled text to hide old draw of
@@ -56,15 +56,15 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 			textWidget.setCaretOffset(textWidget.getCaretOffset());
 			return;
 		}
-		if (annotation instanceof BlockAnnotation) {
-			draw((BlockAnnotation) annotation, gc, textWidget, offset, length, color);
+		if (annotation instanceof LineHeaderAnnotation) {
+			draw((LineHeaderAnnotation) annotation, gc, textWidget, offset, length, color);
 		} else {
-			draw((InlineAnnotation) annotation, gc, textWidget, offset, length, color);
+			draw((LineContentAnnotation) annotation, gc, textWidget, offset, length, color);
 		}
 	}
 
 	/**
-	 * Draw the block annotation in the line spacing of the previous line.
+	 * Draw the line header annotation in the line spacing of the previous line.
 	 * 
 	 * @param annotation the annotation to be drawn
 	 * @param gc the graphics context, <code>null</code> when in clearing mode
@@ -73,7 +73,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 	 * @param length the length of the line
 	 * @param color the color of the line
 	 */
-	private static void draw(BlockAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
+	private static void draw(LineHeaderAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
 		// compute current, previous line index.
 		int lineIndex= -1;
@@ -96,7 +96,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 				return;
 			} else {
 				if (!annotation.isDirty()) {
-					return;
+					//return;
 				}
 			}
 		}
@@ -105,14 +105,14 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 			// There are none previous line, do nothing
 			return;
 		}
-		// refresh the previous line range where block annotation must be drawn.
+		// refresh the previous line range where line header annotation must be drawn.
 		int previousOffset= textWidget.getOffsetAtLine(previousLineIndex);
 		int lineLength= offset - previousOffset;
 		textWidget.redrawRange(previousOffset, lineLength, true);
 	}
 
 	/**
-	 * Draw the inline annotation inside line in the empty area computed by {@link GlyphMetrics}.
+	 * Draw the line content annotation inside line in the empty area computed by {@link GlyphMetrics}.
 	 * 
 	 * @param annotation the annotation to be drawn
 	 * @param gc the graphics context, <code>null</code> when in clearing mode
@@ -121,7 +121,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 	 * @param length the length of the line
 	 * @param color the color of the line
 	 */
-	private static void draw(InlineAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
+	private static void draw(LineContentAnnotation annotation, GC gc, StyledText textWidget, int offset, int length,
 			Color color) {
 		if (gc != null) {
 			// Compute the location of the annotation
@@ -130,7 +130,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 			int x= bounds.x + fontMetrics.getLeading();
 			int y= bounds.y + fontMetrics.getDescent();
 
-			// Draw the inline annotation
+			// Draw the line content annotation
 			annotation.draw(gc, textWidget, offset, length, color, x, y);
 
 			// The inline annotation replaces one character by taking a place width

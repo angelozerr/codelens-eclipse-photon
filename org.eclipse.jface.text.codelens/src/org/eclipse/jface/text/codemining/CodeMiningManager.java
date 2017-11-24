@@ -33,7 +33,7 @@ import org.eclipse.jface.text.source.AnnotationPainter;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.jface.text.source.inlined.InlinedAnnotation;
+import org.eclipse.jface.text.source.inlined.AbstractInlinedAnnotation;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
 import org.eclipse.swt.graphics.Font;
 
@@ -278,14 +278,14 @@ public class CodeMiningManager implements ICodeMiningManager {
 			return null;
 		}
 		List<CompletableFuture<ICodeMining>> miningsToResolve = new ArrayList<>();
-		Set<InlinedAnnotation> currentAnnotations = new HashSet<>();
+		Set<AbstractInlinedAnnotation> currentAnnotations = new HashSet<>();
 		// Loop for grouped code minings
 		groups.entrySet().stream().forEach(g -> {
 			Position pos = new Position(g.getKey().offset, g.getKey().length);
 			List<ICodeMining> minings = g.getValue();
 
 			// Try to find existing annotation
-			CodeMiningAnnotation ann = (CodeMiningAnnotation) fInlinedAnnotationSupport.findExistingAnnotation(pos);
+			CodeMiningAnnotation ann = fInlinedAnnotationSupport.findExistingAnnotation(pos);
 			if (ann == null) {
 				// The annotation doesn't exists, create it.
 				ann = new CodeMiningAnnotation(pos, viewer, fFont);

@@ -17,20 +17,19 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.jface.text.Position;
 
 /**
- * A Block annotation is an annotation which is drawn before a line and which takes some place with
- * a given height.
+ * Inlined annotation which is drawn before a line and which takes some place with a given height.
  * 
  * @since 3.13.0
  */
-public class BlockAnnotation extends InlinedAnnotation {
+public class LineHeaderAnnotation extends AbstractInlinedAnnotation {
 
 	/**
-	 * Block annotation constructor.
+	 * Line header annotation constructor.
 	 * 
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
-	public BlockAnnotation(Position position, StyledText textWidget) {
+	public LineHeaderAnnotation(Position position, StyledText textWidget) {
 		super(position, textWidget);
 	}
 

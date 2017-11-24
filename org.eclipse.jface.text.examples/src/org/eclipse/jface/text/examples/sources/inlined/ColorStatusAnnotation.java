@@ -11,10 +11,10 @@
 package org.eclipse.jface.text.examples.sources.inlined;
 
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.inlined.BlockAnnotation;
+import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
 import org.eclipse.swt.custom.StyledText;
 
-public class ColorStatusAnnotation extends BlockAnnotation {
+public class ColorStatusAnnotation extends LineHeaderAnnotation {
 
 	public ColorStatusAnnotation(Position position, StyledText styledText) {
 		super(position, styledText);

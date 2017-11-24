@@ -15,8 +15,8 @@ import java.util.List;
 
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.jface.text.source.inlined.BlockAnnotation;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotationDrawingStrategy;
+import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
 
@@ -25,7 +25,7 @@ import org.eclipse.swt.graphics.Font;
  *
  * @since 3.13.0
  */
-public class CodeMiningAnnotation extends BlockAnnotation {
+public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
 	private final ISourceViewer fViewer;
 

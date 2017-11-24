@@ -11,14 +11,14 @@
 package org.eclipse.jface.text.examples.sources.inlined;
 
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.inlined.InlineAnnotation;
+import org.eclipse.jface.text.source.inlined.LineContentAnnotation;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
 
-public class ColorAnnotation extends InlineAnnotation {
+public class ColorAnnotation extends LineContentAnnotation {
 
 	private Color color;
 

@@ -18,20 +18,20 @@ import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.jface.text.Position;
 
 /**
- * An Inline annotation is an annotation which is drawn inside a line and which takes some place
- * with a given width.
+ * Inlined annotation which is drawn in the line content and which takes some place with a given
+ * width.
  * 
  * @since 3.13.0
  */
-public class InlineAnnotation extends InlinedAnnotation {
+public class LineContentAnnotation extends AbstractInlinedAnnotation {
 
 	/**
-	 * Inline annotation constructor.
+	 * Line content annotation constructor.
 	 * 
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
-	public InlineAnnotation(Position position, StyledText textWidget) {
+	public LineContentAnnotation(Position position, StyledText textWidget) {
 		super(position, textWidget);
 	}
 

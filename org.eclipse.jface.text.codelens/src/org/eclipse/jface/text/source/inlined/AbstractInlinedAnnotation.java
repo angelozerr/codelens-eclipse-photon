@@ -8,12 +8,12 @@ import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 
 /**
- * Base class for inlined annotation.
+ * Abstract class for inlined annotation.
  *
  * @since 3.13.0
  * @noimplement This interface is not intended to be implemented by clients.
  */
-public abstract class InlinedAnnotation extends Annotation {
+public abstract class AbstractInlinedAnnotation extends Annotation {
 
 	/**
 	 * The type of inlined annotations.
@@ -41,7 +41,7 @@ public abstract class InlinedAnnotation extends Annotation {
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
-	protected InlinedAnnotation(Position position, StyledText textWidget) {
+	protected AbstractInlinedAnnotation(Position position, StyledText textWidget) {
 		super(TYPE, false, ""); //$NON-NLS-1$
 		this.position= position;
 		this.textWidget= textWidget;
