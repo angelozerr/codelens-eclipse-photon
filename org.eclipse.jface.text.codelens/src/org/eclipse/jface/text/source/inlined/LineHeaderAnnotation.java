@@ -18,14 +18,14 @@ import org.eclipse.jface.text.Position;
 
 /**
  * Inlined annotation which is drawn before a line and which takes some place with a given height.
- * 
+ *
  * @since 3.13.0
  */
 public class LineHeaderAnnotation extends AbstractInlinedAnnotation {
 
 	/**
 	 * Line header annotation constructor.
-	 * 
+	 *
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
@@ -35,7 +35,7 @@ public class LineHeaderAnnotation extends AbstractInlinedAnnotation {
 
 	/**
 	 * Returns the annotation height. By default the height used is the height of the font.
-	 * 
+	 *
 	 * @return the annotation height.
 	 */
 	public int getHeight() {

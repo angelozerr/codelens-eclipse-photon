@@ -23,7 +23,7 @@ public class Positions {
 
 	/**
 	 * Returns the line position by taking care or not of of leading spaces.
-	 * 
+	 *
 	 * @param lineIndex the line index
 	 * @param document the document
 	 * @param leadingSpaces true if line spacing must take care of and not otherwise.
@@ -42,7 +42,7 @@ public class Positions {
 
 	/**
 	 * Returns the leading spaces of the given line text.
-	 * 
+	 *
 	 * @param line the line text.
 	 * @return the leading spaces of the given line text.
 	 */

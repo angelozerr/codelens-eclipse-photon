@@ -23,22 +23,23 @@ import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy;
 
 /**
  * {@link IDrawingStrategy} implementation to render {@link AbstractInlinedAnnotation}.
- * 
+ *
  * @since 3.13.0
  */
-public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
+class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 
 	@Override
 	public void draw(Annotation annotation, GC gc, StyledText textWidget, int offset, int length, Color color) {
 		if (!(annotation instanceof AbstractInlinedAnnotation)) {
 			return;
 		}
-		InlinedAnnotationDrawingStrategy.draw((AbstractInlinedAnnotation) annotation, gc, textWidget, offset, length, color);
+		InlinedAnnotationDrawingStrategy.draw((AbstractInlinedAnnotation) annotation, gc, textWidget, offset, length,
+				color);
 	}
 
 	/**
 	 * Draw the inlined annotation.
-	 * 
+	 *
 	 * @param annotation the annotation to be drawn
 	 * @param gc the graphics context, <code>null</code> when in clearing mode
 	 * @param textWidget the text widget to draw on
@@ -65,7 +66,7 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 
 	/**
 	 * Draw the line header annotation in the line spacing of the previous line.
-	 * 
+	 *
 	 * @param annotation the annotation to be drawn
 	 * @param gc the graphics context, <code>null</code> when in clearing mode
 	 * @param textWidget the text widget to draw on
@@ -87,16 +88,27 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 			// Compute the location of the annotation
 			int x= textWidget.getLocationAtOffset(offset).x;
 			int y= 0;
+			int height= annotation.getHeight();
 			if (lineIndex > 0) {
 				int previousOffset= textWidget.getOffsetAtLine(previousLineIndex);
-				y= textWidget.getLocationAtOffset(previousOffset).y + annotation.getHeight();
+				y= textWidget.getLocationAtOffset(previousOffset).y + height;
 			}
-			if (gc.getClipping().contains(x, y)) {
+			Rectangle clipping= gc.getClipping();
+			if (clipping.contains(x, y)) {
+				// GC clipping contains the x, y where annotation must be drawn.
+
+				// Colorize line spacing area with the background of StyledText to avoid having highlighted line color
+				Rectangle client= textWidget.getClientArea();
+				textWidget.drawBackground(gc, x, y, client.width, height);
+
+				// draw the annotation
 				annotation.draw(gc, textWidget, offset, length, color, x, y);
 				return;
 			} else {
-				if (!annotation.isDirty()) {
-					//return;
+				if (!(clipping.y - height == y)) {
+					// Clipping doesn't include the y of previous line spacing, stop the redraw
+					// range.
+					return;
 				}
 			}
 		}
@@ -112,8 +124,9 @@ public class InlinedAnnotationDrawingStrategy implements IDrawingStrategy {
 	}
 
 	/**
-	 * Draw the line content annotation inside line in the empty area computed by {@link GlyphMetrics}.
-	 * 
+	 * Draw the line content annotation inside line in the empty area computed by
+	 * {@link GlyphMetrics}.
+	 *
 	 * @param annotation the annotation to be drawn
 	 * @param gc the graphics context, <code>null</code> when in clearing mode
 	 * @param textWidget the text widget to draw on

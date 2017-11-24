@@ -20,14 +20,14 @@ import org.eclipse.jface.text.Position;
 /**
  * Inlined annotation which is drawn in the line content and which takes some place with a given
  * width.
- * 
+ *
  * @since 3.13.0
  */
 public class LineContentAnnotation extends AbstractInlinedAnnotation {
 
 	/**
 	 * Line content annotation constructor.
-	 * 
+	 *
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
@@ -38,7 +38,7 @@ public class LineContentAnnotation extends AbstractInlinedAnnotation {
 	/**
 	 * Returns an instance of GlyphMetrics used to takes 'width' place when the annotation is drawn
 	 * inside the line.
-	 * 
+	 *
 	 * @return an instance of GlyphMetrics used to takes 'width' place when the annotation is drawn
 	 *         inside the line.
 	 */
@@ -48,7 +48,7 @@ public class LineContentAnnotation extends AbstractInlinedAnnotation {
 
 	/**
 	 * Returns the annotation width. By default it computes the well width for the text annotation.
-	 * 
+	 *
 	 * @return the annotation width.
 	 */
 	public int getWidth() {

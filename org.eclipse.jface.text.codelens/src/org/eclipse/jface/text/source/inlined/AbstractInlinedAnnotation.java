@@ -1,3 +1,13 @@
+/**
+ *  Copyright (c) 2017 Angelo ZERR.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide inline annotations support - Bug 527675
+ */
 package org.eclipse.jface.text.source.inlined;
 
 import org.eclipse.swt.custom.StyledText;
@@ -31,13 +41,8 @@ public abstract class AbstractInlinedAnnotation extends Annotation {
 	private final StyledText textWidget;
 
 	/**
-	 * The dirty flag.
-	 */
-	private boolean dirty;
-
-	/**
 	 * Inlined annotation constructor.
-	 * 
+	 *
 	 * @param position the position where the annotation must be drawn.
 	 * @param textWidget the {@link StyledText} widget where the annotation must be drawn.
 	 */
@@ -49,7 +54,7 @@ public abstract class AbstractInlinedAnnotation extends Annotation {
 
 	/**
 	 * Returns the position where the annotation must be drawn.
-	 * 
+	 *
 	 * @return the position where the annotation must be drawn.
 	 */
 	public Position getPosition() {
@@ -58,7 +63,7 @@ public abstract class AbstractInlinedAnnotation extends Annotation {
 
 	/**
 	 * Returns the {@link StyledText} widget where the annotation must be drawn.
-	 * 
+	 *
 	 * @return the {@link StyledText} widget where the annotation must be drawn.
 	 */
 	public StyledText getTextWidget() {
@@ -66,8 +71,19 @@ public abstract class AbstractInlinedAnnotation extends Annotation {
 	}
 
 	/**
-	 * Draw the inlined annotation. By default it draw the text of the annotation with gray color. User
-	 * can override this method to draw anything.
+	 * Redraw the inlined annotation.
+	 */
+	public void redraw() {
+		StyledText text= getTextWidget();
+		InlinedAnnotationSupport.runInUIThread(text, (t) -> {
+			Position pos= getPosition();
+			InlinedAnnotationDrawingStrategy.draw(this, null, t, pos.getOffset(), pos.getLength(), null);
+		});
+	}
+
+	/**
+	 * Draw the inlined annotation. By default it draw the text of the annotation with gray color.
+	 * User can override this method to draw anything.
 	 *
 	 * @param gc the graphics context
 	 * @param textWidget the text widget to draw on
@@ -81,31 +97,6 @@ public abstract class AbstractInlinedAnnotation extends Annotation {
 		gc.setForeground(color);
 		gc.setBackground(textWidget.getBackground());
 		gc.drawText(getText(), x, y);
-	}
-
-	/**
-	 * Returns true if the content of the annotation has changed and false otherwise.
-	 * 
-	 * @return true if the content of the annotation has changed and false otherwise.
-	 */
-	public boolean isDirty() {
-		return dirty;
-	}
-
-	/**
-	 * Set the dirty flag.
-	 * 
-	 * @param dirty the dirty flag
-	 */
-	public void setDirty(boolean dirty) {
-		this.dirty= dirty;
-	}
-
-	@Override
-	public void setText(String text) {
-		String oldText= super.getText();
-		setDirty(!text.equals(oldText));
-		super.setText(text);
 	}
 
 }

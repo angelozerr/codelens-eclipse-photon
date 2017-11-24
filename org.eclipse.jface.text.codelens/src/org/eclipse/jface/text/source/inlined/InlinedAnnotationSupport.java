@@ -44,12 +44,12 @@ import org.eclipse.jface.text.source.ISourceViewer;
 
 /**
  * Support to draw inlined annotations:
- * 
+ *
  * <ul>
  * <li>line header annotation with {@link LineHeaderAnnotation}.</li>
  * <li>line content annotation with {@link LineContentAnnotation}.</li>
  * </ul>
- * 
+ *
  * @since 3.13.0
  */
 public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
@@ -81,7 +81,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
 	 * Install the inlined annotation support for the given viewer.
-	 * 
+	 *
 	 * @param viewer the source viewer
 	 * @param painter the annotation painter to use to draw the inlined annotations.
 	 */
@@ -109,7 +109,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
 	 * Set the color to use to draw the inlined annotations.
-	 * 
+	 *
 	 * @param color the color to use to draw the inlined annotations.
 	 */
 	public void setColor(Color color) {
@@ -126,7 +126,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
 	 * Update the given inlined annotation.
-	 * 
+	 *
 	 * @param annotations the inlined annotation.
 	 */
 	public void updateAnnotations(Set<AbstractInlinedAnnotation> annotations) {
@@ -152,7 +152,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 			}
 			if (ann instanceof LineContentAnnotation) {
 				// Create metrics with well width to add space where the inline annotation must
-				// be drawn.				
+				// be drawn.
 				runInUIThread(styledText, (text) -> {
 					StyleRange s= new StyleRange();
 					s.start= ann.getPosition().getOffset();
@@ -205,7 +205,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 	/**
 	 * Returns the existing codemining annotation with the given position information and null
 	 * otherwise.
-	 * 
+	 *
 	 * @param pos the position
 	 * @return the existing codemining annotation with the given position information and null
 	 *         otherwise.
@@ -278,7 +278,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
 	 * Returns the {@link AbstractInlinedAnnotation} from the given line index and null otherwise.
-	 * 
+	 *
 	 * @param viewer the source viewer
 	 * @param lineIndex the line index.
 	 * @return the {@link AbstractInlinedAnnotation} from the given line index and null otherwise.
@@ -321,7 +321,7 @@ public class InlinedAnnotationSupport implements StyledTextLineSpacingProvider {
 
 	/**
 	 * Execute UI {@link StyledText} function which requires UI Thread.
-	 * 
+	 *
 	 * @param text the styled text
 	 * @param fn the function to execute.
 	 */

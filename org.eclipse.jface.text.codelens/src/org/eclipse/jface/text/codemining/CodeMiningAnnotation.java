@@ -15,9 +15,7 @@ import java.util.List;
 
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.jface.text.source.inlined.InlinedAnnotationDrawingStrategy;
 import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
 
 /**
@@ -27,15 +25,12 @@ import org.eclipse.swt.graphics.Font;
  */
 public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
-	private final ISourceViewer fViewer;
-
 	private final Font fFont;
 
 	private final List<ICodeMining> fMinings;
 
 	public CodeMiningAnnotation(Position position, ISourceViewer viewer, Font font) {
 		super(position, viewer.getTextWidget());
-		fViewer = viewer;
 		fFont = font;
 		fMinings = new ArrayList<>();
 	}
@@ -52,19 +47,6 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 	public void update(List<ICodeMining> minings) {
 		fMinings.clear();
 		fMinings.addAll(minings);
-	}
-
-	/**
-	 * Redraw the codemining annotation.
-	 */
-	public void redraw() {
-		StyledText text = fViewer.getTextWidget();
-		CodeMiningUtilities.runInUIThread(text, (t) -> {
-			Position pos = getMininges().get(0).getPosition();
-			if (pos != null) {
-				InlinedAnnotationDrawingStrategy.draw(this, null, t, pos.getOffset(), pos.getLength(), null);
-			}
-		});
 	}
 
 	/**
