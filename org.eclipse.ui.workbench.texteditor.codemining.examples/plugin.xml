@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+<plugin>
+
+	<extension
+	      point="org.eclipse.ui.workbench.texteditor.codemining.codeMiningProviders">
+	   <codeMiningProvider
+	         id="java"
+	         activate="true"
+	         class="JavaCodeMiningProvider"
+	         name="Java CodeMining"
+	         targetId="java.codeminings.target">
+	         <codeMining id="references"
+	                     name="Show references"
+	                     activate="true" >
+	         </codeMining>
+	         <codeMining id="implementations"
+	                     name="Show implementations"
+	                     activate="true" >
+	         </codeMining>
+	         <codeMining id="main"
+	                     name="Show Run/Debug icon for main"
+	                     activate="true" >
+	         </codeMining>
+	   </codeMiningProvider>
+	</extension>
+
+    <extension
+	      point="org.eclipse.ui.workbench.texteditor.codemining.codeMiningProviders">
+	   <codeMiningProvider
+	         id="junit"
+	         activate="true"
+	         class="JUnitCodeMiningProvider"
+	         name="JUnit CodeMining"
+	         targetId="java.codeminings.target">
+	         <codeMining id="junit"
+	                     name="Show Run/Debug icon for @Test"
+	                     activate="true" >
+	         </codeMining>
+	   </codeMiningProvider>
+	</extension>
+
+	<extension
+	      point="org.eclipse.ui.workbench.texteditor.codemining.codeMiningProviderTargets">
+	   <target
+	         id="java.codeminings.target"
+	         name="Java Editor">
+	   </target>
+	</extension>	
+
+</plugin>

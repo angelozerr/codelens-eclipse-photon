@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            name="%CodeMiningProvidersPreferencePage"
+            category="org.eclipse.ui.preferencePages.GeneralTextEditor"
+            class="org.eclipse.ui.internal.editors.text.codemining.CodeMiningProvidersPreferencePage"
+            id="org.eclipse.ui.editors.preferencePages.CodeMiningProvidersPreferencePage">
+         <keywordReference id="org.eclipse.ui.editors.codeMiningProviders"/>
+      </page>      
+   </extension>
+   
+   <extension
+      point="org.eclipse.ui.keywords">
+      <keyword
+            label="%preferenceKeywords.codeMiningProviders"
+            id="org.eclipse.ui.editors.codeMiningProviders"/>
+   </extension>
+      
+</plugin>
