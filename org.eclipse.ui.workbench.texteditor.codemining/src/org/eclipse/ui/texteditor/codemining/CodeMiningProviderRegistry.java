@@ -42,8 +42,8 @@ public class CodeMiningProviderRegistry {
 		private CodeMiningProviderDelegate(CodeMiningProviderDescriptor descriptor) {
 			codeLensProviderDescriptor = descriptor;
 			if (fPreferenceStore != null) {
-				fStateMask = fPreferenceStore
-						.getInt(codeLensProviderDescriptor.getId() /* + CodeMiningProviderDescriptor.STATE_MASK_POSTFIX */);
+				fStateMask = fPreferenceStore.getInt(
+						codeLensProviderDescriptor.getId() /* + CodeMiningProviderDescriptor.STATE_MASK_POSTFIX */);
 				fIsEnabled = !fPreferenceStore.getBoolean(codeLensProviderDescriptor.getId());
 			}
 		}
@@ -106,6 +106,14 @@ public class CodeMiningProviderRegistry {
 			fCodeMiningProvider = null;
 			codeLensProviderDescriptor = null;
 			fContext = null;
+		}
+
+		@Override
+		public void configure(IPreferenceStore store) {
+			if (fCodeMiningProvider != null) {
+				fCodeMiningProvider.configure(store);
+			}
+
 		}
 
 		// @Override

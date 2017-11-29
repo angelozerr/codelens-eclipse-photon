@@ -25,6 +25,9 @@ public class ClassImplementationsCodeMiningProvider extends AbstractSyncCodeMini
 
 	@Override
 	public List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor) {
+		if (!isCodeMiningEnabled("codemining.implementations.enabled")) {
+			return null;
+		}
 		IDocument document = viewer.getDocument();
 		List<ICodeMining> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();
@@ -47,7 +50,7 @@ public class ClassImplementationsCodeMiningProvider extends AbstractSyncCodeMini
 			if (className.length() > 0) {
 				try {
 					lenses.add(new ClassCodeMining(className, lineIndex, document, this));
-				} catch (BadLocationException e) {					
+				} catch (BadLocationException e) {
 					e.printStackTrace();
 				}
 			}
@@ -55,7 +58,8 @@ public class ClassImplementationsCodeMiningProvider extends AbstractSyncCodeMini
 	}
 
 	@Override
-	protected ICodeMining resolveSyncCodeMining(ITextViewer viewer, ICodeMining contentMining, IProgressMonitor monitor) {
+	protected ICodeMining resolveSyncCodeMining(ITextViewer viewer, ICodeMining contentMining,
+			IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
 		String className = ((ClassCodeMining) contentMining).getClassName();
 		int refCount = 0;
@@ -82,5 +86,4 @@ public class ClassImplementationsCodeMiningProvider extends AbstractSyncCodeMini
 			return null;
 		}
 	}
-
 }

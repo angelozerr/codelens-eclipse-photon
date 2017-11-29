@@ -28,6 +28,9 @@ public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningPro
 
 	@Override
 	protected List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor) {
+		if (!isCodeMiningEnabled("codemining.references.enabled")) {
+			return null;
+		}
 		IDocument document = viewer.getDocument();
 		List<ICodeMining> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();
@@ -35,12 +38,11 @@ public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningPro
 			String line = getLineText(document, i, false).trim();
 			int index = line.indexOf("class ");
 			if (index == 0) {
-				String className = line.substring(index + "class ".length(), line.length()).trim();				
+				String className = line.substring(index + "class ".length(), line.length()).trim();
 				if (className.length() > 0) {
 					try {
 						lenses.add(new ClassCodeMining(className, i, document, this));
 					} catch (BadLocationException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
@@ -50,13 +52,13 @@ public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningPro
 	}
 
 	@Override
-	protected ICodeMining resolveSyncCodeMining(ITextViewer viewer, ICodeMining contentMining, IProgressMonitor monitor) {
+	protected ICodeMining resolveSyncCodeMining(ITextViewer viewer, ICodeMining contentMining,
+			IProgressMonitor monitor) {
 		IDocument document = viewer.getDocument();
 		String className = ((ClassCodeMining) contentMining).getClassName();
 		try {
 			int wait = Integer.parseInt(className);
 			try {
-
 				for (int i = 0; i < wait; i++) {
 					monitor.isCanceled();
 					synchronized (lock) {
@@ -64,7 +66,7 @@ public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningPro
 					}
 				}
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				Thread.currentThread().interrupt();
 			}
 		} catch (NumberFormatException e) {
 

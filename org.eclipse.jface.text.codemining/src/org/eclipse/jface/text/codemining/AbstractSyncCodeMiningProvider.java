@@ -10,6 +10,7 @@
  */
 package org.eclipse.jface.text.codemining;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,7 +29,8 @@ public abstract class AbstractSyncCodeMiningProvider extends AbstractCodeMiningP
 	public CompletableFuture<List<? extends ICodeMining>> provideCodeMinings(ITextViewer viewer,
 			IProgressMonitor monitor) {
 		return CompletableFuture.supplyAsync(() -> {
-			return provideSyncCodeMinings(viewer, monitor);
+			List<? extends ICodeMining>  minings = provideSyncCodeMinings(viewer, monitor);
+			return minings != null ? minings : Collections.emptyList();
 		});
 	}
 

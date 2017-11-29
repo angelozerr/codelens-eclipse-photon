@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Position;
@@ -35,6 +36,8 @@ import org.eclipse.jface.text.source.IAnnotationModelExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.inlined.AbstractInlinedAnnotation;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.graphics.Font;
 
 /**
@@ -64,7 +67,29 @@ public class CodeMiningManager implements ICodeMiningManager {
 	 */
 	private IProgressMonitor fMonitor;
 
+	/**
+	 * The inlined annotation support used to draw CodeMining in the line spacing.
+	 */
 	private InlinedAnnotationSupport fInlinedAnnotationSupport;
+
+	/**
+	 * Preference store used to configure CodeMing providers.
+	 */
+	private IPreferenceStore fPreferenceStore;
+
+	private CodeMiningPropertyChangeListener fCodeMiningPropertyChangeListener = new CodeMiningPropertyChangeListener();
+
+	private class CodeMiningPropertyChangeListener implements IPropertyChangeListener {
+
+		@Override
+		public void propertyChange(PropertyChangeEvent event) {
+			if (event.getProperty().startsWith("codemining")) {
+				configureProviders();
+				run();
+			}
+		}
+
+	}
 
 	/**
 	 * Installs this codemining manager with the given arguments.
@@ -84,13 +109,31 @@ public class CodeMiningManager implements ICodeMiningManager {
 		fInlinedAnnotationSupport = new InlinedAnnotationSupport();
 		fInlinedAnnotationSupport.install(viewer, painter);
 		setCodeMiningProviders(codeMiningProviders);
-		/*
-		 * StyledText text= this.fViewer.getTextWidget(); if (text == null ||
-		 * text.isDisposed()) { return; } // Initialize defaut code mining font and
-		 * color. FontData[] fds= text.getFont().getFontData(); for (int i= 0; i <
-		 * fds.length; i++) { fds[i].setStyle(fds[i].getStyle() | SWT.ITALIC); }
-		 * setFont(new Font(text.getDisplay(), fds));
-		 */
+		if (fPreferenceStore != null) {
+			configure(fPreferenceStore);
+		}
+	}
+
+	/**
+	 * Configure the CodeMining providers.
+	 * 
+	 * @param preferenceStore
+	 */
+	public void configure(IPreferenceStore preferenceStore) {
+		if (fPreferenceStore != null) {
+			fPreferenceStore.removePropertyChangeListener(fCodeMiningPropertyChangeListener);
+		}
+		fPreferenceStore = preferenceStore;
+		fPreferenceStore.addPropertyChangeListener(fCodeMiningPropertyChangeListener);
+		configureProviders();
+	}
+
+	private void configureProviders() {
+		if (fCodeMiningProviders != null) {
+			for (ICodeMiningProvider provider : fCodeMiningProviders) {
+				provider.configure(fPreferenceStore);
+			}
+		}
 	}
 
 	/**
@@ -124,6 +167,11 @@ public class CodeMiningManager implements ICodeMiningManager {
 		}
 		if (fInlinedAnnotationSupport != null) {
 			fInlinedAnnotationSupport.uninstall();
+		}
+		fViewer = null;
+		if (fPreferenceStore != null) {
+			fPreferenceStore.removePropertyChangeListener(fCodeMiningPropertyChangeListener);
+			fPreferenceStore = null;
 		}
 	}
 
@@ -215,7 +263,9 @@ public class CodeMiningManager implements ICodeMiningManager {
 	private static CompletableFuture<List<? extends ICodeMining>> getCodeMininges(ITextViewer viewer,
 			List<ICodeMiningProvider> providers, IProgressMonitor monitor) {
 		List<CompletableFuture<List<? extends ICodeMining>>> com = providers.stream()
-				.map(provider -> provider.provideCodeMinings(viewer, monitor)).collect(Collectors.toList());
+				.map(provider -> provider.provideCodeMinings(viewer, monitor))
+				.filter(c -> c != null)
+				.collect(Collectors.toList());
 		return CompletableFuture.allOf(com.toArray(new CompletableFuture[com.size()])).thenApply(
 				v -> com.stream().map(CompletableFuture::join).flatMap(l -> l.stream()).collect(Collectors.toList()));
 	}

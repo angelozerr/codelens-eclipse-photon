@@ -10,6 +10,8 @@
  */
 package org.eclipse.jface.text.examples.codemining;
 
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceStore;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.codemining.CodeMiningManager;
@@ -22,7 +24,12 @@ import org.eclipse.jface.text.source.ISourceViewer;
 //import org.eclipse.jface.text.source.ISourceViewerExtension5;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
@@ -30,16 +37,17 @@ import org.eclipse.swt.widgets.Shell;
  * A Code Mining demo with class references, implementations.
  *
  */
-public class CodeMiningDemo {
+public class CodeMiningWithPreferencesDemo {
 
 	public static void main(String[] args) throws Exception {
 
 		Display display = new Display();
 		Shell shell = new Shell(display);
-		shell.setLayout(new FillLayout());
+		shell.setLayout(new GridLayout(2, false));
 		shell.setText("Code Mining demo");
 
 		ISourceViewer sourceViewer = new SourceViewer(shell, null, SWT.V_SCROLL | SWT.BORDER);
+		sourceViewer.getTextWidget().setLayoutData(new GridData(GridData.FILL_BOTH));
 		sourceViewer.setDocument(
 				new Document("// Type class & new keyword and see references CodeMining\n"
 						+ "// Name class with a number N to emulate Nms before resolving the references CodeMining \n\n"
@@ -48,13 +56,44 @@ public class CodeMiningDemo {
 		// Add AnnotationPainter (required by CodeMining)
 		AnnotationPainter painter = createAnnotationPainter(sourceViewer);
 
+		IPreferenceStore store = new PreferenceStore();
+		store.setValue("codemining.references.enabled", true);
+		store.setValue("codemining.implementation.enabled", true);
+		
 		CodeMiningManager manager = new CodeMiningManager();
 		manager.install(sourceViewer, painter, new ICodeMiningProvider[] { new ClassReferencesCodeMiningProvider(),
 				new ClassImplementationsCodeMiningProvider() });
+		manager.configure(store);
 		manager.run();
 		
 		sourceViewer.getTextWidget().addModifyListener(e -> {
 			manager.run();
+		});
+		
+		Composite buttons = new Composite(shell, SWT.NONE);
+		buttons.setLayoutData(new GridData(GridData.FILL_VERTICAL));
+		buttons.setLayout(new GridLayout());
+		
+		Button showReferences = new Button(buttons, SWT.TOGGLE);
+		showReferences.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		showReferences.setSelection(store.getBoolean("codemining.references.enabled"));
+		showReferences.setText("Show References");
+		showReferences.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				store.setValue("codemining.references.enabled", showReferences.getSelection());
+			}
+		});
+
+		Button showImplementations = new Button(buttons, SWT.TOGGLE);
+		showImplementations.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		showImplementations.setSelection(store.getBoolean("codemining.implementations.enabled"));
+		showImplementations.setText("Show Implementations");
+		showImplementations.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				store.setValue("codemining.implementations.enabled", showImplementations.getSelection());
+			}
 		});
 
 		// shell.pack();
