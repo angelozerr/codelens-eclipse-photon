@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
 package org.eclipse.jface.text.codemining;
 
@@ -16,7 +16,6 @@ import java.util.List;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
-import org.eclipse.swt.graphics.Font;
 
 /**
  * Code Mining annotation.
@@ -25,14 +24,11 @@ import org.eclipse.swt.graphics.Font;
  */
 public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
-	private final Font fFont;
-
 	private final List<ICodeMining> fMinings;
 
-	public CodeMiningAnnotation(Position position, ISourceViewer viewer, Font font) {
+	public CodeMiningAnnotation(Position position, ISourceViewer viewer) {
 		super(position, viewer.getTextWidget());
-		fFont = font;
-		fMinings = new ArrayList<>();
+		fMinings= new ArrayList<>();
 	}
 
 	public List<ICodeMining> getMininges() {
@@ -44,24 +40,15 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 		fMinings.addAll(minings);
 	}
 
-	/**
-	 * Returns the code mining font and null otherwise.
-	 * 
-	 * @return the code mining font and null otherwise.
-	 */
-	public Font getFont() {
-		return fFont;
-	}
-
 	@Override
 	public String getText() {
-		String oldText = super.getText();
+		String oldText= super.getText();
 		super.setText(getText(new ArrayList<>(getMininges()), oldText));
 		return super.getText();
 	}
 
 	private static String getText(List<ICodeMining> minings, String oldText) {
-		StringBuilder text = new StringBuilder();
+		StringBuilder text= new StringBuilder();
 		for (ICodeMining codeMining : minings) {
 			if (!codeMining.isResolved()) {
 				// Don't render codemining which is not resolved.
@@ -73,7 +60,7 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 			if (text.length() > 0) {
 				text.append(" | "); //$NON-NLS-1$
 			}
-			String title = codeMining.getCommand() != null ? codeMining.getCommand().getTitle() : "no command"; //$NON-NLS-1$
+			String title= codeMining.getCommand() != null ? codeMining.getCommand().getTitle() : "no command"; //$NON-NLS-1$
 			text.append(title);
 		}
 		return text.toString();

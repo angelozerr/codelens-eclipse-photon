@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
 package org.eclipse.jface.text.codemining;
 
@@ -16,7 +16,7 @@ import java.util.List;
  * Represents a reference to a command. Provides a title which will be used to represent a command
  * in the UI and, optionally, an array of arguments which will be passed to the command handler
  * function when invoked.
- * 
+ *
  * @since 3.13.0
  */
 public class Command {
@@ -51,7 +51,7 @@ public class Command {
 
 	/**
 	 * Title of the command, like `save`.
-	 * 
+	 *
 	 * @return the title of the command, like `save`.
 	 */
 	public String getTitle() {
@@ -60,7 +60,7 @@ public class Command {
 
 	/**
 	 * Title of the command, like `save`.
-	 * 
+	 *
 	 * @param title the title of the command, like `save`.
 	 */
 	public void setTitle(final String title) {
@@ -69,7 +69,7 @@ public class Command {
 
 	/**
 	 * The identifier of the actual command handler.
-	 * 
+	 *
 	 * @return the identifier of the actual command handler.
 	 */
 	public String getCommand() {
@@ -78,7 +78,7 @@ public class Command {
 
 	/**
 	 * The identifier of the actual command handler.
-	 * 
+	 *
 	 * @param command the identifier of the actual command handler.
 	 */
 	public void setCommand(final String command) {
@@ -87,7 +87,7 @@ public class Command {
 
 	/**
 	 * Arguments that the command handler should be invoked with.
-	 * 
+	 *
 	 * @return Arguments that the command handler should be invoked with.
 	 */
 	public List<Object> getArguments() {
@@ -96,7 +96,7 @@ public class Command {
 
 	/**
 	 * Arguments that the command handler should be invoked with.
-	 * 
+	 *
 	 * @param arguments Arguments that the command handler should be invoked with.
 	 */
 	public void setArguments(final List<Object> arguments) {

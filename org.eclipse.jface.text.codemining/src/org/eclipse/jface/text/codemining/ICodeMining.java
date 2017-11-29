@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
 package org.eclipse.jface.text.codemining;
 
@@ -22,7 +22,7 @@ public interface ICodeMining {
 	/**
 	 * Returns the line position where content mining must be displayed in the line
 	 * spacing area.
-	 * 
+	 *
 	 * @return the line position where content mining must be displayed in the line
 	 *         spacing area.
 	 */
@@ -30,21 +30,21 @@ public interface ICodeMining {
 
 	/**
 	 * Returns the resolved command and null otherwise.
-	 * 
+	 *
 	 * @return the resolved command and null otherwise.
 	 */
 	Command getCommand();
 
 	/**
 	 * Returns the content mining resolver and null otherwise.
-	 * 
+	 *
 	 * @return the content mining resolver and null otherwise.
 	 */
 	ICodeMiningResolver getResolver();
 
 	/**
 	 * Returns true if the content mining is resolved and false otherwise.
-	 * 
+	 *
 	 * @return true if the content mining is resolved and false otherwise.
 	 */
 	boolean isResolved();

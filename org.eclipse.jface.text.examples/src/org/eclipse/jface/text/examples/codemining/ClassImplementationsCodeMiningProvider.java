@@ -25,9 +25,6 @@ public class ClassImplementationsCodeMiningProvider extends AbstractSyncCodeMini
 
 	@Override
 	public List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor) {
-		if (!isCodeMiningEnabled("codemining.implementations.enabled")) {
-			return null;
-		}
 		IDocument document = viewer.getDocument();
 		List<ICodeMining> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();

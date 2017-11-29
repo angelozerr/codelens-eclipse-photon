@@ -11,9 +11,14 @@
 package org.eclipse.jface.text.examples.codemining;
 
 import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.codemining.CodeMiningManager;
 import org.eclipse.jface.text.codemining.ICodeMiningProvider;
+import org.eclipse.jface.text.reconciler.DirtyRegion;
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
+import org.eclipse.jface.text.reconciler.MonoReconciler;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.jface.text.source.AnnotationPainter;
@@ -21,6 +26,7 @@ import org.eclipse.jface.text.source.IAnnotationAccess;
 import org.eclipse.jface.text.source.ISourceViewer;
 //import org.eclipse.jface.text.source.ISourceViewerExtension5;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
@@ -47,15 +53,35 @@ public class CodeMiningDemo {
 				new AnnotationModel());
 		// Add AnnotationPainter (required by CodeMining)
 		AnnotationPainter painter = createAnnotationPainter(sourceViewer);
+		// Install Inlined annotation support
+		InlinedAnnotationSupport support = new InlinedAnnotationSupport();
+		support.install(sourceViewer, painter);
 
+		// Create manager
 		CodeMiningManager manager = new CodeMiningManager();
-		manager.install(sourceViewer, painter, new ICodeMiningProvider[] { new ClassReferencesCodeMiningProvider(),
+		manager.install(sourceViewer, support, new ICodeMiningProvider[] { new ClassReferencesCodeMiningProvider(),
 				new ClassImplementationsCodeMiningProvider() });
-		manager.run();
-		
-		sourceViewer.getTextWidget().addModifyListener(e -> {
-			manager.run();
-		});
+
+		// Execute manager in a reconciler
+		MonoReconciler reconciler = new MonoReconciler(new IReconcilingStrategy() {
+
+			@Override
+			public void setDocument(IDocument document) {
+				manager.run();
+			}
+
+			@Override
+			public void reconcile(DirtyRegion dirtyRegion, IRegion subRegion) {
+
+			}
+
+			@Override
+			public void reconcile(IRegion partition) {
+				manager.run();
+			}
+		}, false);
+		reconciler.setDelay(1);
+		reconciler.install(sourceViewer);
 
 		// shell.pack();
 		shell.open();

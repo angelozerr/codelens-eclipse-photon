@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
 package org.eclipse.jface.text.codemining;
 
@@ -39,7 +39,7 @@ public abstract class AbstractCodeMining implements ICodeMining {
 
 	/**
 	 * CodeMining constructor to locate the code mining before the given line number.
-	 * 
+	 *
 	 * @param beforeLineNumber the line number where codemining must be drawn. Use 0 if you wish to
 	 *            locate the code mining before the first line number (1).
 	 * @param document the document.
@@ -51,7 +51,7 @@ public abstract class AbstractCodeMining implements ICodeMining {
 
 	/**
 	 * CodeMining constructor to locate the code mining before the given line number.
-	 * 
+	 *
 	 * @param beforeLineNumber the line number where codemining must be drawn. Use 0 if you wish to
 	 *            locate the code mining before the first line number (1).
 	 * @param document the document.
@@ -76,7 +76,7 @@ public abstract class AbstractCodeMining implements ICodeMining {
 
 	/**
 	 * Set the resolved command.
-	 * 
+	 *
 	 * @param command the resolved command.
 	 */
 	public void setCommand(Command command) {

@@ -28,9 +28,6 @@ public class ClassReferencesCodeMiningProvider extends AbstractSyncCodeMiningPro
 
 	@Override
 	protected List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor) {
-		if (!isCodeMiningEnabled("codemining.references.enabled")) {
-			return null;
-		}
 		IDocument document = viewer.getDocument();
 		List<ICodeMining> lenses = new ArrayList<>();
 		int lineCount = document.getNumberOfLines();

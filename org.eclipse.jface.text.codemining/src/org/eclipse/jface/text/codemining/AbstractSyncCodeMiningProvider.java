@@ -6,7 +6,7 @@
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Add CodeMining support in SourceViewer - Bug 527515
+ *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
 package org.eclipse.jface.text.codemining;
 
@@ -29,7 +29,7 @@ public abstract class AbstractSyncCodeMiningProvider extends AbstractCodeMiningP
 	public CompletableFuture<List<? extends ICodeMining>> provideCodeMinings(ITextViewer viewer,
 			IProgressMonitor monitor) {
 		return CompletableFuture.supplyAsync(() -> {
-			List<? extends ICodeMining>  minings = provideSyncCodeMinings(viewer, monitor);
+			List<? extends ICodeMining> minings= provideSyncCodeMinings(viewer, monitor);
 			return minings != null ? minings : Collections.emptyList();
 		});
 	}
@@ -44,19 +44,19 @@ public abstract class AbstractSyncCodeMiningProvider extends AbstractCodeMiningP
 
 	/**
 	 * Provide code minings with sync mode.
-	 * 
+	 *
 	 * @param viewer The viewer in which the command was invoked.
 	 * @param monitor A progress monitor.
-	 * @return An array of code minings that resolves to such. The lack of a result can be signaled by
-	 *         returning `null`, or an empty array.
+	 * @return An array of code minings that resolves to such. The lack of a result can be signaled
+	 *         by returning `null`, or an empty array.
 	 */
 	protected abstract List<? extends ICodeMining> provideSyncCodeMinings(ITextViewer viewer, IProgressMonitor monitor);
 
 	/**
 	 * Resolve code mining with sync mode.
-	 * 
+	 *
 	 * @param viewer The viewer in which the command was invoked.
-	 * 
+	 *
 	 * @param codeMining code mining that must be resolved.
 	 * @param monitor A progress monitor.
 	 * @return The given code mining that resolves to such.
