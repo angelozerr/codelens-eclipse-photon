@@ -10,37 +10,53 @@
  */
 package org.eclipse.jface.text.codemining;
 
+import java.util.concurrent.CompletableFuture;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Position;
 
 /**
- * Code Mining API
+ * A code mining represents a content (ex: label, icons) that should be shown along with source
+ * text, like the number of references, a way to run tests (with run/debug icons), etc.
  *
- * @since 3.13.0
+ * A code mining is unresolved when no content (ex: label, icons) is associated to it. For
+ * performance reasons the creation of a code mining and resolving should be done to two stages.
+ *
+ * @since 3.13
  */
 public interface ICodeMining {
 
 	/**
-	 * Returns the line position where content mining must be displayed in the line
-	 * spacing area.
+	 * Returns the line position where code mining must be displayed in the line spacing area.
 	 *
-	 * @return the line position where content mining must be displayed in the line
-	 *         spacing area.
+	 * @return the line position where code mining must be displayed in the line spacing area.
 	 */
 	Position getPosition();
 
 	/**
-	 * Returns the resolved command and null otherwise.
+	 * Returns the owner provider which has created this mining.
 	 *
-	 * @return the resolved command and null otherwise.
+	 * @return the owner provider which has created this mining.
 	 */
-	Command getCommand();
+	ICodeMiningProvider getProvider();
 
 	/**
-	 * Returns the content mining resolver and null otherwise.
+	 * Returns the resolved label.
 	 *
-	 * @return the content mining resolver and null otherwise.
+	 * @return the resolved label.
 	 */
-	ICodeMiningResolver getResolver();
+	String getLabel();
+
+	/**
+	 * Returns the future which resolved the content of mining and null otherwise.
+	 *
+	 * @param viewer the viewer.
+	 * @param monitor the monitor.
+	 * @return the future which resolved the content of mining and null otherwise.
+	 */
+	CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor);
 
 	/**
 	 * Returns true if the content mining is resolved and false otherwise.
@@ -48,4 +64,9 @@ public interface ICodeMining {
 	 * @return true if the content mining is resolved and false otherwise.
 	 */
 	boolean isResolved();
+
+	/**
+	 * Dispose the mining.
+	 */
+	void dispose();
 }

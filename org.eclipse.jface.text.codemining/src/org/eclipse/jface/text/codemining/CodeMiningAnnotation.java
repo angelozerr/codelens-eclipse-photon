@@ -20,7 +20,7 @@ import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
 /**
  * Code Mining annotation.
  *
- * @since 3.13.0
+ * @since 3.13
  */
 public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
@@ -31,26 +31,39 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 		fMinings= new ArrayList<>();
 	}
 
-	public List<ICodeMining> getMininges() {
+	protected List<ICodeMining> getMinings() {
 		return fMinings;
 	}
 
 	public void update(List<ICodeMining> minings) {
-		fMinings.clear();
+		disposeMinings();
 		fMinings.addAll(minings);
+	}
+
+	@Override
+	public void markDeleted(boolean deleted) {
+		super.markDeleted(deleted);
+		if (deleted) {
+			disposeMinings();
+		}
+	}
+
+	private void disposeMinings() {
+		fMinings.stream().forEach(ICodeMining::dispose);
+		fMinings.clear();
 	}
 
 	@Override
 	public String getText() {
 		String oldText= super.getText();
-		super.setText(getText(new ArrayList<>(getMininges()), oldText));
+		super.setText(getText(new ArrayList<>(getMinings()), oldText));
 		return super.getText();
 	}
 
 	private static String getText(List<ICodeMining> minings, String oldText) {
 		StringBuilder text= new StringBuilder();
-		for (ICodeMining codeMining : minings) {
-			if (!codeMining.isResolved()) {
+		for (ICodeMining mining : minings) {
+			if (!mining.isResolved()) {
 				// Don't render codemining which is not resolved.
 				if (oldText != null) {
 					return oldText;
@@ -60,9 +73,10 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 			if (text.length() > 0) {
 				text.append(" | "); //$NON-NLS-1$
 			}
-			String title= codeMining.getCommand() != null ? codeMining.getCommand().getTitle() : "no command"; //$NON-NLS-1$
+			String title= mining.getLabel() != null ? mining.getLabel() : "no command"; //$NON-NLS-1$
 			text.append(title);
 		}
 		return text.toString();
 	}
+
 }

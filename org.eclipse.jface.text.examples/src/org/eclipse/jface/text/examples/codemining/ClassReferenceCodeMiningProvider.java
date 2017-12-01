@@ -21,7 +21,7 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.codemining.AbstractCodeMiningProvider;
 import org.eclipse.jface.text.codemining.ICodeMining;
 
-public class ClassImplementationsCodeMiningProvider extends AbstractCodeMiningProvider {
+public class ClassReferenceCodeMiningProvider extends AbstractCodeMiningProvider {
 
 	@Override
 	public CompletableFuture<List<? extends ICodeMining>> provideCodeMinings(ITextViewer viewer,
@@ -33,30 +33,21 @@ public class ClassImplementationsCodeMiningProvider extends AbstractCodeMiningPr
 			for (int i = 0; i < lineCount; i++) {
 				// check if request was canceled.
 				monitor.isCanceled();
-				updateContentMining(i, document, "class ", lenses);
-				updateContentMining(i, document, "interface ", lenses);
+				String line = AbstractClassCodeMining.getLineText(document, i).trim();
+				int index = line.indexOf("class ");
+				if (index == 0) {
+					String className = line.substring(index + "class ".length(), line.length()).trim();
+					if (className.length() > 0) {
+						try {
+							lenses.add(new ClassReferenceCodeMining(className, i, document, this));
+						} catch (BadLocationException e) {
+							e.printStackTrace();
+						}
+					}
+				}
 			}
 			return lenses;
 		});
-	}
-
-	private void updateContentMining(int lineIndex, IDocument document, String token, List<ICodeMining> lenses) {
-		String line = AbstractClassCodeMining.getLineText(document, lineIndex).trim();
-		int index = line.indexOf(token);
-		if (index == 0) {
-			String className = line.substring(index + token.length(), line.length());
-			index = className.indexOf(" ");
-			if (index != -1) {
-				className = className.substring(0, index);
-			}
-			if (className.length() > 0) {
-				try {
-					lenses.add(new ClassImplementationCodeMining(className, lineIndex, document, this));
-				} catch (BadLocationException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 
 }

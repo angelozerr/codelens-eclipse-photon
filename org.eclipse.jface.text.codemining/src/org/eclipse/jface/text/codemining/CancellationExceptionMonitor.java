@@ -17,11 +17,11 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 
 /**
  * {@link IProgressMonitor} which throws a {@link CancellationException} when
- * {@link IProgressMonitor#isCanceled()} is returns true.
+ * {@link IProgressMonitor#isCanceled()} returns true.
  *
- * @since 3.13.0
+ * @since 3.13
  */
-class CodeMiningMonitor extends NullProgressMonitor {
+class CancellationExceptionMonitor extends NullProgressMonitor {
 
 	@Override
 	public boolean isCanceled() {

@@ -59,7 +59,7 @@ public class CodeMiningDemo {
 
 		// Create manager
 		CodeMiningManager manager = new CodeMiningManager();
-		manager.install(sourceViewer, support, new ICodeMiningProvider[] { new ClassReferencesCodeMiningProvider(),
+		manager.install(sourceViewer, support, new ICodeMiningProvider[] { new ClassReferenceCodeMiningProvider(),
 				new ClassImplementationsCodeMiningProvider() });
 
 		// Execute manager in a reconciler
@@ -80,7 +80,7 @@ public class CodeMiningDemo {
 				manager.run();
 			}
 		}, false);
-		reconciler.setDelay(1);
+		//reconciler.setDelay(1);
 		reconciler.install(sourceViewer);
 
 		// shell.pack();
@@ -94,14 +94,17 @@ public class CodeMiningDemo {
 
 	private static AnnotationPainter createAnnotationPainter(ISourceViewer viewer) {
 		IAnnotationAccess annotationAccess = new IAnnotationAccess() {
+			@Override
 			public Object getType(Annotation annotation) {
 				return annotation.getType();
 			}
 
+			@Override
 			public boolean isMultiLine(Annotation annotation) {
 				return true;
 			}
 
+			@Override
 			public boolean isTemporary(Annotation annotation) {
 				return true;
 			}

@@ -39,7 +39,7 @@ import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
 /**
  * Code Mining manager implementation.
  *
- * @since 3.13.0
+ * @since 3.13
  */
 public class CodeMiningManager {
 
@@ -108,7 +108,7 @@ public class CodeMiningManager {
 		// minings
 		cancel();
 		// Refresh the code minings by using the new progress monitor.
-		fMonitor= new CodeMiningMonitor();
+		fMonitor= new CancellationExceptionMonitor();
 		update(fMonitor);
 	}
 
@@ -126,13 +126,13 @@ public class CodeMiningManager {
 			// then group code minings by lines position
 			Map<Position, List<ICodeMining>> groups= goupByLines(symbols, fCodeMiningProviders);
 			// resolve and render code minings
-			List<CompletableFuture<ICodeMining>> codeMiningResolverRequest= renderCodeMininges(groups, fViewer,
+			List<ICodeMining> miningsToResolve= renderCodeMinings(groups, fViewer,
 					monitor);
-			if (codeMiningResolverRequest != null) {
-				for (CompletableFuture<ICodeMining> p : codeMiningResolverRequest) {
+			if (miningsToResolve != null) {
+				for (ICodeMining mining : miningsToResolve) {
 					// check if request was canceled.
 					monitor.isCanceled();
-					p.thenAccept(mining -> {
+					mining.resolve(fViewer, monitor).thenAccept(o -> {
 						// check if request was canceled.
 						monitor.isCanceled();
 						Position pos= mining.getPosition();
@@ -192,7 +192,6 @@ public class CodeMiningManager {
 	 * @param providers CodeMining providers used to retrieve code minings.
 	 * @return a sorted Map which groups the given code minings by same position line.
 	 */
-	@SuppressWarnings("unlikely-arg-type")
 	private static Map<Position, List<ICodeMining>> goupByLines(List<? extends ICodeMining> codeMinings,
 			List<ICodeMiningProvider> providers) {
 		// sort code minings by lineNumber and provider-rank if
@@ -201,13 +200,9 @@ public class CodeMiningManager {
 				return -1;
 			} else if (a.getPosition().offset > b.getPosition().offset) {
 				return 1;
-			} else if (a.getResolver() == null && b.getResolver() != null) {
+			} else if (providers.indexOf(a.getProvider()) < providers.indexOf(b.getProvider())) {
 				return -1;
-			} else if (a.getResolver() != null && b.getResolver() == null) {
-				return 1;
-			} else if (providers.indexOf(a.getResolver()) < providers.indexOf(b.getResolver())) {
-				return -1;
-			} else if (providers.indexOf(a.getResolver()) > providers.indexOf(b.getResolver())) {
+			} else if (providers.indexOf(a.getProvider()) > providers.indexOf(b.getProvider())) {
 				return 1;
 			} else {
 				return 0;
@@ -225,7 +220,7 @@ public class CodeMiningManager {
 	 * @param monitor the progress monitor
 	 * @return the list of code minings to resolve.
 	 */
-	private List<CompletableFuture<ICodeMining>> renderCodeMininges(Map<Position, List<ICodeMining>> groups,
+	private List<ICodeMining> renderCodeMinings(Map<Position, List<ICodeMining>> groups,
 			ISourceViewer viewer, IProgressMonitor monitor) {
 		// check if request was canceled.
 		monitor.isCanceled();
@@ -235,7 +230,7 @@ public class CodeMiningManager {
 			// done.
 			return null;
 		}
-		List<CompletableFuture<ICodeMining>> miningsToResolve= new ArrayList<>();
+		List<ICodeMining> miningsToResolve= new ArrayList<>();
 		Set<AbstractInlinedAnnotation> currentAnnotations= new HashSet<>();
 		// Loop for grouped code minings
 		groups.entrySet().stream().forEach(g -> {
@@ -251,15 +246,13 @@ public class CodeMiningManager {
 			ann.update(minings);
 			// Collect minings to resolve
 			for (ICodeMining mining : minings) {
-				if (!mining.isResolved() && mining.getResolver() != null) {
-					// mining is not resolved and it exists a resolver.
-					CompletableFuture<ICodeMining> promise= mining.getResolver().resolveCodeMining(viewer, mining,
-							monitor);
-					// Try to resolve now
-					if (promise.getNow(null) == null) {
-						// It will be resolved in the "resolved" step.
-						miningsToResolve.add(promise);
-					}
+				// check if request was canceled.
+				monitor.isCanceled();
+				// try to resolve the mining in a future.
+				mining.resolve(viewer, monitor);
+				if (!mining.isResolved()) {
+					// Mininig is not resolved, add it to resolve it in the next step
+					miningsToResolve.add(mining);
 				}
 			}
 			currentAnnotations.add(ann);

@@ -13,13 +13,13 @@ package org.eclipse.jface.text.examples.codemining;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.codemining.AbstractCodeMining;
-import org.eclipse.jface.text.codemining.ICodeMiningResolver;
+import org.eclipse.jface.text.codemining.ICodeMiningProvider;
 
-public class ClassCodeMining extends AbstractCodeMining {
+public abstract class AbstractClassCodeMining extends AbstractCodeMining {
 
 	private final String className;
 
-	public ClassCodeMining(String className, int afterLineNumber, IDocument document, ICodeMiningResolver resolver)
+	public AbstractClassCodeMining(String className, int afterLineNumber, IDocument document, ICodeMiningProvider resolver)
 			throws BadLocationException {
 		super(afterLineNumber, document, resolver);
 		this.className = className;
@@ -27,6 +27,17 @@ public class ClassCodeMining extends AbstractCodeMining {
 
 	public String getClassName() {
 		return className;
+	}
+
+	public static String getLineText(IDocument document, int line) {
+		try {
+			int lo = document.getLineOffset(line);
+			int ll = document.getLineLength(line);
+			return document.get(lo, ll);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 }

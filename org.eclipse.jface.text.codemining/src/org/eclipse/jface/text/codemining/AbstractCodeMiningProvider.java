@@ -20,7 +20,7 @@ import org.eclipse.core.runtime.IAdaptable;
  * Clients may subclass.
  * </p>
  *
- * @since 3.13.0
+ * @since 3.13
  */
 public abstract class AbstractCodeMiningProvider implements ICodeMiningProvider {
 

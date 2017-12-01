@@ -10,15 +10,20 @@
  */
 package org.eclipse.jface.text.codemining;
 
+import java.util.concurrent.CompletableFuture;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.inlined.Positions;
 
 /**
  * Abstract class for {@link ICodeMining}.
  *
- * @since 3.13.0
+ * @since 3.13
  */
 public abstract class AbstractCodeMining implements ICodeMining {
 
@@ -27,15 +32,14 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 */
 	private final Position position;
 
-	/**
-	 * The resolver to resolve codemining if needed. If no need to resolve the resolver can be null.
-	 */
-	private final ICodeMiningResolver resolver;
+	private final ICodeMiningProvider provider;
+
+	private CompletableFuture<Void> resolveFuture;
 
 	/**
-	 * The command of the resolved codemining.
+	 * The label of the resolved codemining.
 	 */
-	private Command command;
+	private String label;
 
 	/**
 	 * CodeMining constructor to locate the code mining before the given line number.
@@ -45,23 +49,10 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 * @param document the document.
 	 * @throws BadLocationException when line number doesn't exists
 	 */
-	public AbstractCodeMining(int beforeLineNumber, IDocument document) throws BadLocationException {
-		this(beforeLineNumber, document, null);
-	}
-
-	/**
-	 * CodeMining constructor to locate the code mining before the given line number.
-	 *
-	 * @param beforeLineNumber the line number where codemining must be drawn. Use 0 if you wish to
-	 *            locate the code mining before the first line number (1).
-	 * @param document the document.
-	 * @param resolver the codemining resolver
-	 * @throws BadLocationException when line number doesn't exists
-	 */
-	public AbstractCodeMining(int beforeLineNumber, IDocument document, ICodeMiningResolver resolver)
+	public AbstractCodeMining(int beforeLineNumber, IDocument document, ICodeMiningProvider provider)
 			throws BadLocationException {
 		this.position= Positions.of(beforeLineNumber, document, true);
-		this.resolver= resolver;
+		this.provider= provider;
 	}
 
 	@Override
@@ -70,27 +61,49 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	}
 
 	@Override
-	public Command getCommand() {
-		return command;
-	}
-
-	/**
-	 * Set the resolved command.
-	 *
-	 * @param command the resolved command.
-	 */
-	public void setCommand(Command command) {
-		this.command= command;
+	public ICodeMiningProvider getProvider() {
+		return provider;
 	}
 
 	@Override
-	public ICodeMiningResolver getResolver() {
-		return resolver;
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label= label;
+	}
+
+	@Override
+	public final CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor) {
+		if (resolveFuture == null) {
+			resolveFuture= doResolve(viewer, monitor);
+		}
+		return resolveFuture;
+	}
+
+	/**
+	 * Returns the future which resolved the content of mining and null otherwise. By default, the
+	 * resolve do nothing.
+	 *
+	 * @param viewer the viewer
+	 * @param monitor the monitor
+	 * @return the future which resolved the content of mining and null otherwise.
+	 */
+	protected CompletableFuture<Void> doResolve(ITextViewer viewer, IProgressMonitor monitor) {
+		return null;
 	}
 
 	@Override
 	public boolean isResolved() {
-		return resolver == null || command != null;
+		return resolveFuture == null || resolveFuture.isDone() || label != null;
 	}
 
+	@Override
+	public void dispose() {
+		if (resolveFuture != null) {
+			resolveFuture.cancel(true);
+			resolveFuture= null;
+		}
+	}
 }
