@@ -12,6 +12,11 @@ package org.eclipse.jface.text.codemining;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
+
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import org.eclipse.jface.text.ITextViewer;
@@ -43,30 +48,54 @@ public interface ICodeMining {
 	ICodeMiningProvider getProvider();
 
 	/**
-	 * Returns the resolved label.
+	 * Returns the label may be set early in the class lifecycle, or upon completion of the future
+	 * provided by {@link #resolve(ITextViewer, IProgressMonitor)} operation.
 	 *
-	 * @return the resolved label.
+	 * @return the label may be set early in the class lifecycle, or upon completion of the future
+	 *         provided by {@link #resolve(ITextViewer, IProgressMonitor)} operation.
 	 */
 	String getLabel();
 
 	/**
-	 * Returns the future which resolved the content of mining and null otherwise.
+	 * Returns the future to resolve the content of mining, or
+	 * {@link CompletableFuture#completedFuture(Object)} if no such resolution is necessary (in
+	 * which case {#isResolved()} is expected to return <code>true</code>).
 	 *
 	 * @param viewer the viewer.
 	 * @param monitor the monitor.
-	 * @return the future which resolved the content of mining and null otherwise.
+	 * @return the future to resolve the content of mining, or
+	 *         {@link CompletableFuture#completedFuture(Object)} if no such resolution is necessary
+	 *         (in which case {#isResolved()} is expected to return <code>true</code>).
 	 */
 	CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor);
 
 	/**
-	 * Returns true if the content mining is resolved and false otherwise.
+	 * Returns whether the content mining is resolved. If it is not resolved,
+	 * {{@link #resolve(ITextViewer, IProgressMonitor)}} will be invoked later, triggering the
+	 * future to resolve content.
 	 *
-	 * @return true if the content mining is resolved and false otherwise.
+	 * @return whether the content mining is resolved. If it is not resolved,
+	 *         {{@link #resolve(ITextViewer, IProgressMonitor)}} will be invoked later, triggering
+	 *         the future to resolve content.
 	 */
 	boolean isResolved();
 
 	/**
-	 * Dispose the mining.
+	 * Draw the code mining.
+	 *
+	 * @param gc the graphics context
+	 * @param textWidget the text widget to draw on
+	 * @param color the color of the line
+	 * @param x the x position of the annotation
+	 * @param y the y position of the annotation
+	 * @return the size of the draw of mining.
+	 */
+	Point draw(GC gc, StyledText textWidget, Color color, int x, int y);
+
+	/**
+	 * Dispose the mining. Typically shuts down or cancels all related asynchronous operations.
 	 */
 	void dispose();
+
+	void setMonitor(IProgressMonitor monitor);
 }

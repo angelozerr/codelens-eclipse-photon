@@ -23,14 +23,13 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.codemining.AbstractCodeMiningProvider;
 import org.eclipse.jface.text.codemining.ICodeMining;
 import org.eclipse.jface.text.codemining.ICodeMiningProvider;
-import org.eclipse.jface.text.codemining.ICodeMiningResolver;
 
 public class CodeMiningProviderRegistry {
 
 	/**
 	 * Delegate for contributed codelens provider.
 	 */
-	private class CodeMiningProviderDelegate implements ICodeMiningProvider, ICodeMiningResolver {
+	private class CodeMiningProviderDelegate implements ICodeMiningProvider {
 
 		private CodeMiningProviderDescriptor codeLensProviderDescriptor;
 		private ICodeMiningProvider fCodeMiningProvider;
@@ -70,28 +69,6 @@ public class CodeMiningProviderRegistry {
 
 		}
 
-		@Override
-		public CompletableFuture<ICodeMining> resolveCodeMining(ITextViewer viewer, ICodeMining codeLens,
-				IProgressMonitor monitor) {
-			if (!isEnabled())
-				return null;
-
-			if (!fFailedDuringCreation && fCodeMiningProvider == null) {
-				try {
-					fCodeMiningProvider = codeLensProviderDescriptor.createCodeMiningProviderImplementation();
-				} catch (CoreException ex) {
-					fFailedDuringCreation = true;
-				}
-				if (fContext != null && fCodeMiningProvider instanceof AbstractCodeMiningProvider)
-					((AbstractCodeMiningProvider) fCodeMiningProvider).setContext(fContext);
-			}
-			if (fCodeMiningProvider != null && fCodeMiningProvider instanceof ICodeMiningResolver)
-				return ((ICodeMiningResolver) fCodeMiningProvider).resolveCodeMining(viewer, codeLens, monitor);
-
-			return null;
-
-		}
-
 		private boolean isEnabled() {
 			return fIsEnabled;
 		}
@@ -108,13 +85,13 @@ public class CodeMiningProviderRegistry {
 			fContext = null;
 		}
 
-		@Override
-		public void configure(IPreferenceStore store) {
-			if (fCodeMiningProvider != null) {
-				fCodeMiningProvider.configure(store);
-			}
-
-		}
+//		@Override
+//		public void configure(IPreferenceStore store) {
+//			if (fCodeMiningProvider != null) {
+//				fCodeMiningProvider.configure(store);
+//			}
+//
+//		}
 
 		// @Override
 		// public int getStateMask() {

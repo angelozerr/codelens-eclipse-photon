@@ -8,7 +8,7 @@
  *  Contributors:
  *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
-package org.eclipse.jface.text.codemining;
+package org.eclipse.jface.internal.text.codemining;
 
 import java.util.concurrent.CancellationException;
 

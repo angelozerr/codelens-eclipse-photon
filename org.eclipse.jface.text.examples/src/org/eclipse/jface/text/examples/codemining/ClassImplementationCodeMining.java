@@ -28,7 +28,6 @@ public class ClassImplementationCodeMining extends AbstractClassCodeMining {
 	@Override
 	protected CompletableFuture<Void> doResolve(ITextViewer viewer, IProgressMonitor monitor) {
 		return CompletableFuture.runAsync(() -> {
-
 			IDocument document = viewer.getDocument();
 			String className = super.getClassName();
 			int refCount = 0;
@@ -40,7 +39,6 @@ public class ClassImplementationCodeMining extends AbstractClassCodeMining {
 				refCount += line.contains("implements " + className) ? 1 : 0;
 			}
 			super.setLabel(refCount + " implementation");
-
 		});
 	}
 

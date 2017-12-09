@@ -8,12 +8,20 @@
  *  Contributors:
  *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
-package org.eclipse.jface.text.codemining;
+package org.eclipse.jface.internal.text.codemining;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.codemining.ICodeMining;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
 
@@ -24,19 +32,21 @@ import org.eclipse.jface.text.source.inlined.LineHeaderAnnotation;
  */
 public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
+	private static final String SEPARATOR= " | "; //$NON-NLS-1$
+
 	private final List<ICodeMining> fMinings;
+
+	private ITextViewer viewer;
 
 	public CodeMiningAnnotation(Position position, ISourceViewer viewer) {
 		super(position, viewer.getTextWidget());
 		fMinings= new ArrayList<>();
+		this.viewer= viewer;
 	}
 
-	protected List<ICodeMining> getMinings() {
-		return fMinings;
-	}
-
-	public void update(List<ICodeMining> minings) {
+	public void update(List<ICodeMining> minings, IProgressMonitor monitor) {
 		disposeMinings();
+		minings.stream().forEach(m -> m.setMonitor(monitor));
 		fMinings.addAll(minings);
 	}
 
@@ -54,29 +64,29 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 	}
 
 	@Override
-	public String getText() {
-		String oldText= super.getText();
-		super.setText(getText(new ArrayList<>(getMinings()), oldText));
-		return super.getText();
-	}
-
-	private static String getText(List<ICodeMining> minings, String oldText) {
-		StringBuilder text= new StringBuilder();
+	public void draw(GC gc, StyledText textWidget, int offset, int length, Color color, int x, int y) {
+		gc.setForeground(color);
+		gc.setBackground(textWidget.getBackground());
+		List<ICodeMining> minings= new ArrayList<>(fMinings);
+		int nbDraw= 0;
+		int separatorWidth= -1;
 		for (ICodeMining mining : minings) {
 			if (!mining.isResolved()) {
-				// Don't render codemining which is not resolved.
-				if (oldText != null) {
-					return oldText;
-				}
+				// Don't draw mining which is not resolved
+				// then redraw the annotation when mining is ready.
+				mining.resolve(viewer, null).thenRun(() -> this.redraw());
 				continue;
 			}
-			if (text.length() > 0) {
-				text.append(" | "); //$NON-NLS-1$
+			if (nbDraw > 0) {
+				gc.drawText(SEPARATOR, x, y);
+				if (separatorWidth == -1) {
+					separatorWidth= gc.stringExtent(SEPARATOR).x;
+				}
+				x+= separatorWidth;
 			}
-			String title= mining.getLabel() != null ? mining.getLabel() : "no command"; //$NON-NLS-1$
-			text.append(title);
+			x+= mining.draw(gc, textWidget, color, x, y).x;
+			nbDraw++;
 		}
-		return text.toString();
 	}
 
 }

@@ -12,6 +12,11 @@ package org.eclipse.jface.text.codemining;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
+
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -41,12 +46,15 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 */
 	private String label;
 
+	private IProgressMonitor fMonitor;
+
 	/**
 	 * CodeMining constructor to locate the code mining before the given line number.
 	 *
 	 * @param beforeLineNumber the line number where codemining must be drawn. Use 0 if you wish to
 	 *            locate the code mining before the first line number (1).
 	 * @param document the document.
+	 * @param provider the owner codemining provider which creates this mining.
 	 * @throws BadLocationException when line number doesn't exists
 	 */
 	public AbstractCodeMining(int beforeLineNumber, IDocument document, ICodeMiningProvider provider)
@@ -77,7 +85,7 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	@Override
 	public final CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor) {
 		if (resolveFuture == null) {
-			resolveFuture= doResolve(viewer, monitor);
+			resolveFuture= doResolve(viewer, fMonitor);
 		}
 		return resolveFuture;
 	}
@@ -91,12 +99,17 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 * @return the future which resolved the content of mining and null otherwise.
 	 */
 	protected CompletableFuture<Void> doResolve(ITextViewer viewer, IProgressMonitor monitor) {
-		return null;
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public void setMonitor(IProgressMonitor monitor) {
+		fMonitor= monitor;
 	}
 
 	@Override
 	public boolean isResolved() {
-		return resolveFuture == null || resolveFuture.isDone() || label != null;
+		return (resolveFuture != null && resolveFuture.isDone());
 	}
 
 	@Override
@@ -105,5 +118,23 @@ public abstract class AbstractCodeMining implements ICodeMining {
 			resolveFuture.cancel(true);
 			resolveFuture= null;
 		}
+	}
+
+	/**
+	 * Draw the {@link #getLabel()} of mining with gray color. User can override this method to draw
+	 * anything.
+	 *
+	 * @param gc the graphics context
+	 * @param textWidget the text widget to draw on
+	 * @param color the color of the line
+	 * @param x the x position of the annotation
+	 * @param y the y position of the annotation
+	 * @return the size of the draw of mining.
+	 */
+	@Override
+	public Point draw(GC gc, StyledText textWidget, Color color, int x, int y) {
+		String title= getLabel() != null ? getLabel() : "no command"; //$NON-NLS-1$
+		gc.drawText(title, x, y);
+		return gc.stringExtent(title);
 	}
 }

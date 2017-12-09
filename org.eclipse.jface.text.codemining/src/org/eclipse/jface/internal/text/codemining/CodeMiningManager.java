@@ -8,13 +8,11 @@
  *  Contributors:
  *  Angelo Zerr <angelo.zerr@gmail.com> - [CodeMining] Provide CodeMining support with CodeMiningManager - Bug 527720
  */
-package org.eclipse.jface.text.codemining;
+package org.eclipse.jface.internal.text.codemining;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +24,14 @@ import java.util.stream.Collectors;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
+import org.eclipse.jface.text.IViewportListener;
+import org.eclipse.jface.text.JFaceTextUtil;
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.Annotation;
-import org.eclipse.jface.text.source.IAnnotationModel;
-import org.eclipse.jface.text.source.IAnnotationModelExtension2;
+import org.eclipse.jface.text.codemining.ICodeMining;
+import org.eclipse.jface.text.codemining.ICodeMiningProvider;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.inlined.AbstractInlinedAnnotation;
 import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
@@ -41,12 +41,17 @@ import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
  *
  * @since 3.13
  */
-public class CodeMiningManager {
+public class CodeMiningManager implements Runnable, IViewportListener {
 
 	/**
 	 * The source viewer
 	 */
-	private ISourceViewer fViewer;
+	private final ISourceViewer fViewer;
+
+	/**
+	 * The inlined annotation support used to draw CodeMining in the line spacing.
+	 */
+	private final InlinedAnnotationSupport fInlinedAnnotationSupport;
 
 	/**
 	 * The list of codemining providers.
@@ -58,25 +63,30 @@ public class CodeMiningManager {
 	 */
 	private IProgressMonitor fMonitor;
 
-	/**
-	 * The inlined annotation support used to draw CodeMining in the line spacing.
-	 */
-	private InlinedAnnotationSupport fInlinedAnnotationSupport;
+	private int start;
+
+	private int end;
 
 	/**
-	 * Installs this codemining manager with the given arguments.
+	 * Constructor of codemining manager with the given arguments.
 	 *
 	 * @param viewer the source viewer
 	 * @param inlinedAnnotationSupport the inlined annotation support used to draw code minings
 	 * @param codeMiningProviders the array of codemining providers, must not be empty
 	 */
-	public void install(ISourceViewer viewer, InlinedAnnotationSupport inlinedAnnotationSupport, ICodeMiningProvider[] codeMiningProviders) {
+	public CodeMiningManager(ISourceViewer viewer, InlinedAnnotationSupport inlinedAnnotationSupport,
+			ICodeMiningProvider[] codeMiningProviders) {
 		Assert.isNotNull(viewer);
 		Assert.isNotNull(inlinedAnnotationSupport);
 		Assert.isNotNull(codeMiningProviders);
 		fViewer= viewer;
+		fViewer.addViewportListener(this);
 		fInlinedAnnotationSupport= inlinedAnnotationSupport;
 		setCodeMiningProviders(codeMiningProviders);
+		fViewer.getTextWidget().getDisplay().asyncExec(() -> {
+			start= getInclusiveTopIndexStartOffset();
+			end= getExclusiveBottomIndexEndOffset();
+		});
 	}
 
 	/**
@@ -93,65 +103,40 @@ public class CodeMiningManager {
 	 */
 	public void uninstall() {
 		cancel();
-		fInlinedAnnotationSupport= null;
-		fViewer= null;
+		fViewer.removeViewportListener(this);
 	}
 
 	/**
 	 * Collect, resolve and render the code minings of the viewer.
 	 */
+	@Override
 	public void run() {
-		if (fViewer == null || fInlinedAnnotationSupport == null || fCodeMiningProviders == null || fCodeMiningProviders.size() == 0 || fViewer.getAnnotationModel() == null) {
+		if (fViewer == null || fInlinedAnnotationSupport == null || fCodeMiningProviders == null
+				|| fCodeMiningProviders.size() == 0 || fViewer.getAnnotationModel() == null) {
 			return;
 		}
 		// Cancel the last progress monitor to cancel last resolve and render of code
 		// minings
 		cancel();
-		// Refresh the code minings by using the new progress monitor.
-		fMonitor= new CancellationExceptionMonitor();
-		update(fMonitor);
+		// Update the code minings
+		updateCodeMinings();
 	}
 
 	/**
-	 * Update the code minings by using the given progress monitor and stop process if
-	 * {@link IProgressMonitor#isCanceled()} is true.
-	 *
-	 * @param monitor the progress monitor.
+	 * Update the code minings.
 	 */
-	private void update(final IProgressMonitor monitor) {
+	private void updateCodeMinings() {
+		// Refresh the code minings by using the new progress monitor.
+		fMonitor= new CancellationExceptionMonitor();
+		IProgressMonitor monitor= fMonitor;
 		// Collect the code minings for the viewer
-		getCodeMininges(fViewer, fCodeMiningProviders, monitor).thenAccept(symbols -> {
+		getCodeMinings(fViewer, fCodeMiningProviders, monitor).thenAccept(symbols -> {
 			// check if request was canceled.
 			monitor.isCanceled();
 			// then group code minings by lines position
 			Map<Position, List<ICodeMining>> groups= goupByLines(symbols, fCodeMiningProviders);
 			// resolve and render code minings
-			List<ICodeMining> miningsToResolve= renderCodeMinings(groups, fViewer,
-					monitor);
-			if (miningsToResolve != null) {
-				for (ICodeMining mining : miningsToResolve) {
-					// check if request was canceled.
-					monitor.isCanceled();
-					mining.resolve(fViewer, monitor).thenAccept(o -> {
-						// check if request was canceled.
-						monitor.isCanceled();
-						Position pos= mining.getPosition();
-						IAnnotationModel annotationModel= fViewer.getAnnotationModel();
-						Iterator<Annotation> iter= (annotationModel instanceof IAnnotationModelExtension2)
-								? ((IAnnotationModelExtension2) annotationModel).getAnnotationIterator(pos.offset, 1,
-										true, true)
-								: annotationModel.getAnnotationIterator();
-						while (iter.hasNext()) {
-							Annotation ann= iter.next();
-							if (ann instanceof CodeMiningAnnotation) {
-								// check if request was canceled.
-								monitor.isCanceled();
-								((CodeMiningAnnotation) ann).redraw();
-							}
-						}
-					});
-				}
-			}
+			renderCodeMinings(groups, fViewer, monitor);
 		});
 	}
 
@@ -175,11 +160,10 @@ public class CodeMiningManager {
 	 * @return the list of {@link CompletableFuture} which provides the list of {@link ICodeMining}
 	 *         for the given <code>viewer</code> by using the given providers.
 	 */
-	private static CompletableFuture<List<? extends ICodeMining>> getCodeMininges(ITextViewer viewer,
+	private static CompletableFuture<List<? extends ICodeMining>> getCodeMinings(ITextViewer viewer,
 			List<ICodeMiningProvider> providers, IProgressMonitor monitor) {
 		List<CompletableFuture<List<? extends ICodeMining>>> com= providers.stream()
-				.map(provider -> provider.provideCodeMinings(viewer, monitor))
-				.filter(c -> c != null)
+				.map(provider -> provider.provideCodeMinings(viewer, monitor)).filter(c -> c != null)
 				.collect(Collectors.toList());
 		return CompletableFuture.allOf(com.toArray(new CompletableFuture[com.size()])).thenApply(
 				v -> com.stream().map(CompletableFuture::join).flatMap(l -> l.stream()).collect(Collectors.toList()));
@@ -218,41 +202,46 @@ public class CodeMiningManager {
 	 * @param groups code minings grouped by lines position
 	 * @param viewer the viewer
 	 * @param monitor the progress monitor
-	 * @return the list of code minings to resolve.
 	 */
-	private List<ICodeMining> renderCodeMinings(Map<Position, List<ICodeMining>> groups,
-			ISourceViewer viewer, IProgressMonitor monitor) {
+	private void renderCodeMinings(Map<Position, List<ICodeMining>> groups, ISourceViewer viewer,
+			IProgressMonitor monitor) {
 		// check if request was canceled.
 		monitor.isCanceled();
 		IDocument document= viewer != null ? viewer.getDocument() : null;
 		if (document == null) {
 			// this case comes from when editor is closed before codemining rendered is
 			// done.
-			return null;
+			return;
 		}
-		List<ICodeMining> miningsToResolve= new ArrayList<>();
+		Set<CodeMiningAnnotation> existingAnnotations= new HashSet<>();
 		Set<AbstractInlinedAnnotation> currentAnnotations= new HashSet<>();
 		// Loop for grouped code minings
 		groups.entrySet().stream().forEach(g -> {
+			// check if request was canceled.
+			monitor.isCanceled();
+
 			Position pos= new Position(g.getKey().offset, g.getKey().length);
 			List<ICodeMining> minings= g.getValue();
-
+			boolean exists= false;
 			// Try to find existing annotation
 			CodeMiningAnnotation ann= fInlinedAnnotationSupport.findExistingAnnotation(pos);
-			if (ann == null) {
+			if (ann != null) {
+				exists= true;
+			} else {
 				// The annotation doesn't exists, create it.
 				ann= new CodeMiningAnnotation(pos, viewer);
 			}
-			ann.update(minings);
-			// Collect minings to resolve
-			for (ICodeMining mining : minings) {
-				// check if request was canceled.
-				monitor.isCanceled();
-				// try to resolve the mining in a future.
-				mining.resolve(viewer, monitor);
-				if (!mining.isResolved()) {
-					// Mininig is not resolved, add it to resolve it in the next step
-					miningsToResolve.add(mining);
+			ann.update(minings, monitor);
+			if (isInVisibleLines(ann)) {
+				if (exists) {
+					existingAnnotations.add(ann);
+				}
+				// Collect minings to resolve
+				for (ICodeMining mining : minings) {
+					// check if request was canceled.
+					monitor.isCanceled();
+					// try to resolve the mining in a future.
+					mining.resolve(viewer, monitor);
 				}
 			}
 			currentAnnotations.add(ann);
@@ -260,7 +249,59 @@ public class CodeMiningManager {
 		// check if request was canceled.
 		monitor.isCanceled();
 		fInlinedAnnotationSupport.updateAnnotations(currentAnnotations);
-		return miningsToResolve;
+		existingAnnotations.stream().forEach(ann -> ann.redraw());
+	}
+
+	private boolean isInVisibleLines(CodeMiningAnnotation ann) {
+		return ann.getPosition().getOffset() >= start && ann.getPosition().getOffset() <= end;
+	}
+
+	@Override
+	public void viewportChanged(int verticalOffset) {
+		start= getInclusiveTopIndexStartOffset();
+		end= getExclusiveBottomIndexEndOffset();
+	}
+
+	/**
+	 * Returns the document offset of the upper left corner of the source viewer's view port,
+	 * possibly including partially visible lines.
+	 *
+	 * @return the document offset if the upper left corner of the view port
+	 */
+	private int getInclusiveTopIndexStartOffset() {
+		if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
+			int top= JFaceTextUtil.getPartialTopIndex(fViewer);
+			try {
+				IDocument document= fViewer.getDocument();
+				return document.getLineOffset(top);
+			} catch (BadLocationException x) {
+			}
+		}
+
+		return -1;
+	}
+
+	/**
+	 * Returns the first invisible document offset of the lower right corner of the source viewer's
+	 * view port, possibly including partially visible lines.
+	 *
+	 * @return the first invisible document offset of the lower right corner of the view port
+	 */
+	private int getExclusiveBottomIndexEndOffset() {
+		if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
+			int bottom= JFaceTextUtil.getPartialBottomIndex(fViewer);
+			try {
+				IDocument document= fViewer.getDocument();
+
+				if (bottom >= document.getNumberOfLines())
+					bottom= document.getNumberOfLines() - 1;
+
+				return document.getLineOffset(bottom) + document.getLineLength(bottom);
+			} catch (BadLocationException x) {
+			}
+		}
+
+		return -1;
 	}
 
 }

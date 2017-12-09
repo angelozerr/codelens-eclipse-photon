@@ -10,11 +10,11 @@
  */
 package org.eclipse.jface.text.examples.codemining;
 
+import org.eclipse.jface.internal.text.codemining.CodeMiningManager;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextViewerExtension2;
-import org.eclipse.jface.text.codemining.CodeMiningManager;
 import org.eclipse.jface.text.codemining.ICodeMiningProvider;
 import org.eclipse.jface.text.reconciler.DirtyRegion;
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
@@ -58,8 +58,7 @@ public class CodeMiningDemo {
 		support.install(sourceViewer, painter);
 
 		// Create manager
-		CodeMiningManager manager = new CodeMiningManager();
-		manager.install(sourceViewer, support, new ICodeMiningProvider[] { new ClassReferenceCodeMiningProvider(),
+		CodeMiningManager manager = new CodeMiningManager(sourceViewer, support, new ICodeMiningProvider[] { new ClassReferenceCodeMiningProvider(),
 				new ClassImplementationsCodeMiningProvider() });
 
 		// Execute manager in a reconciler
