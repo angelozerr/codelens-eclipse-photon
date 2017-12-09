@@ -37,8 +37,14 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 */
 	private final Position position;
 
+	/**
+	 * The owner codemining provider which creates this mining.
+	 */
 	private final ICodeMiningProvider provider;
 
+	/**
+	 * The future used to resolve mining.
+	 */
 	private CompletableFuture<Void> resolveFuture;
 
 	/**
@@ -46,6 +52,9 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	 */
 	private String label;
 
+	/**
+	 * The progress monitor used when {@link #resolve(ITextViewer)} is done.
+	 */
 	private IProgressMonitor fMonitor;
 
 	/**
@@ -78,12 +87,17 @@ public abstract class AbstractCodeMining implements ICodeMining {
 		return label;
 	}
 
+	/**
+	 * Set the label mining.
+	 *
+	 * @param label the label mining.
+	 */
 	public void setLabel(String label) {
 		this.label= label;
 	}
 
 	@Override
-	public final CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor) {
+	public final CompletableFuture<Void> resolve(ITextViewer viewer) {
 		if (resolveFuture == null) {
 			resolveFuture= doResolve(viewer, fMonitor);
 		}
@@ -103,8 +117,8 @@ public abstract class AbstractCodeMining implements ICodeMining {
 	}
 
 	@Override
-	public void setMonitor(IProgressMonitor monitor) {
-		fMonitor= monitor;
+	public void setProgressMonitor(IProgressMonitor monitor) {
+		this.fMonitor= monitor;
 	}
 
 	@Override

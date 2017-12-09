@@ -49,12 +49,19 @@ public interface ICodeMining {
 
 	/**
 	 * Returns the label may be set early in the class lifecycle, or upon completion of the future
-	 * provided by {@link #resolve(ITextViewer, IProgressMonitor)} operation.
+	 * provided by {@link #resolve(ITextViewer)} operation.
 	 *
 	 * @return the label may be set early in the class lifecycle, or upon completion of the future
-	 *         provided by {@link #resolve(ITextViewer, IProgressMonitor)} operation.
+	 *         provided by {@link #resolve(ITextViewer)} operation.
 	 */
 	String getLabel();
+
+	/**
+	 * Set the progress monitor used when {@link #resolve(ITextViewer)} is done.
+	 *
+	 * @param monitor the progress monitor used when {@link #resolve(ITextViewer)} is done.
+	 */
+	void setProgressMonitor(IProgressMonitor monitor);
 
 	/**
 	 * Returns the future to resolve the content of mining, or
@@ -62,21 +69,20 @@ public interface ICodeMining {
 	 * which case {#isResolved()} is expected to return <code>true</code>).
 	 *
 	 * @param viewer the viewer.
-	 * @param monitor the monitor.
 	 * @return the future to resolve the content of mining, or
 	 *         {@link CompletableFuture#completedFuture(Object)} if no such resolution is necessary
 	 *         (in which case {#isResolved()} is expected to return <code>true</code>).
 	 */
-	CompletableFuture<Void> resolve(ITextViewer viewer, IProgressMonitor monitor);
+	CompletableFuture<Void> resolve(ITextViewer viewer);
 
 	/**
 	 * Returns whether the content mining is resolved. If it is not resolved,
-	 * {{@link #resolve(ITextViewer, IProgressMonitor)}} will be invoked later, triggering the
-	 * future to resolve content.
+	 * {{@link #resolve(ITextViewer)}} will be invoked later, triggering the future to resolve
+	 * content.
 	 *
 	 * @return whether the content mining is resolved. If it is not resolved,
-	 *         {{@link #resolve(ITextViewer, IProgressMonitor)}} will be invoked later, triggering
-	 *         the future to resolve content.
+	 *         {{@link #resolve(ITextViewer)}} will be invoked later, triggering the future to
+	 *         resolve content.
 	 */
 	boolean isResolved();
 
@@ -96,6 +102,4 @@ public interface ICodeMining {
 	 * Dispose the mining. Typically shuts down or cancels all related asynchronous operations.
 	 */
 	void dispose();
-
-	void setMonitor(IProgressMonitor monitor);
 }

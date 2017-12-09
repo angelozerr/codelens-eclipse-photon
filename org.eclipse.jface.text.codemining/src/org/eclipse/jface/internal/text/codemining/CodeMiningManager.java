@@ -41,7 +41,7 @@ import org.eclipse.jface.text.source.inlined.InlinedAnnotationSupport;
  *
  * @since 3.13
  */
-public class CodeMiningManager implements Runnable, IViewportListener {
+public class CodeMiningManager implements Runnable {
 
 	/**
 	 * The source viewer
@@ -63,9 +63,91 @@ public class CodeMiningManager implements Runnable, IViewportListener {
 	 */
 	private IProgressMonitor fMonitor;
 
-	private int start;
+	/**
+	 * Tracker of start/end offset of visible lines.
+	 */
+	private VisibleLines visibleLines;
 
-	private int end;
+	/**
+	 * Class to track start/end offset of visible lines.
+	 *
+	 */
+	class VisibleLines implements IViewportListener {
+
+		private int startOffset;
+
+		private int endOffset;
+
+		public VisibleLines() {
+			fViewer.getTextWidget().getDisplay().asyncExec(() -> {
+				startOffset= getInclusiveTopIndexStartOffset();
+				endOffset= getExclusiveBottomIndexEndOffset();
+			});
+		}
+
+		@Override
+		public void viewportChanged(int verticalOffset) {
+			compute();
+		}
+
+		private void compute() {
+			startOffset= getInclusiveTopIndexStartOffset();
+			endOffset= getExclusiveBottomIndexEndOffset();
+		}
+
+		/**
+		 * Returns the document offset of the upper left corner of the source viewer's view port,
+		 * possibly including partially visible lines.
+		 *
+		 * @return the document offset if the upper left corner of the view port
+		 */
+		private int getInclusiveTopIndexStartOffset() {
+			if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
+				int top= JFaceTextUtil.getPartialTopIndex(fViewer);
+				try {
+					IDocument document= fViewer.getDocument();
+					return document.getLineOffset(top);
+				} catch (BadLocationException x) {
+					// Do nothing
+				}
+			}
+			return -1;
+		}
+
+		/**
+		 * Returns the first invisible document offset of the lower right corner of the source
+		 * viewer's view port, possibly including partially visible lines.
+		 *
+		 * @return the first invisible document offset of the lower right corner of the view port
+		 */
+		private int getExclusiveBottomIndexEndOffset() {
+			if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
+				int bottom= JFaceTextUtil.getPartialBottomIndex(fViewer);
+				try {
+					IDocument document= fViewer.getDocument();
+
+					if (bottom >= document.getNumberOfLines())
+						bottom= document.getNumberOfLines() - 1;
+
+					return document.getLineOffset(bottom) + document.getLineLength(bottom);
+				} catch (BadLocationException x) {
+					// Do nothing
+				}
+			}
+			return -1;
+		}
+
+		/**
+		 * Returns true if the given annotation is in visible lines and false otherwise.
+		 *
+		 * @param ann the codemining annotation
+		 * @return true if the given annotation is in visible lines and false otherwise.
+		 */
+		public boolean isInVisibleLines(CodeMiningAnnotation ann) {
+			return ann.getPosition().getOffset() >= startOffset && ann.getPosition().getOffset() <= endOffset;
+		}
+	}
+
 
 	/**
 	 * Constructor of codemining manager with the given arguments.
@@ -80,13 +162,10 @@ public class CodeMiningManager implements Runnable, IViewportListener {
 		Assert.isNotNull(inlinedAnnotationSupport);
 		Assert.isNotNull(codeMiningProviders);
 		fViewer= viewer;
-		fViewer.addViewportListener(this);
+		visibleLines= new VisibleLines();
+		fViewer.addViewportListener(visibleLines);
 		fInlinedAnnotationSupport= inlinedAnnotationSupport;
 		setCodeMiningProviders(codeMiningProviders);
-		fViewer.getTextWidget().getDisplay().asyncExec(() -> {
-			start= getInclusiveTopIndexStartOffset();
-			end= getExclusiveBottomIndexEndOffset();
-		});
 	}
 
 	/**
@@ -103,7 +182,7 @@ public class CodeMiningManager implements Runnable, IViewportListener {
 	 */
 	public void uninstall() {
 		cancel();
-		fViewer.removeViewportListener(this);
+		fViewer.removeViewportListener(visibleLines);
 	}
 
 	/**
@@ -213,7 +292,7 @@ public class CodeMiningManager implements Runnable, IViewportListener {
 			// done.
 			return;
 		}
-		Set<CodeMiningAnnotation> existingAnnotations= new HashSet<>();
+		Set<CodeMiningAnnotation> annotationsToRedraw= new HashSet<>();
 		Set<AbstractInlinedAnnotation> currentAnnotations= new HashSet<>();
 		// Loop for grouped code minings
 		groups.entrySet().stream().forEach(g -> {
@@ -222,86 +301,23 @@ public class CodeMiningManager implements Runnable, IViewportListener {
 
 			Position pos= new Position(g.getKey().offset, g.getKey().length);
 			List<ICodeMining> minings= g.getValue();
-			boolean exists= false;
 			// Try to find existing annotation
 			CodeMiningAnnotation ann= fInlinedAnnotationSupport.findExistingAnnotation(pos);
-			if (ann != null) {
-				exists= true;
-			} else {
+			if (ann == null) {
 				// The annotation doesn't exists, create it.
 				ann= new CodeMiningAnnotation(pos, viewer);
+			} else if (visibleLines.isInVisibleLines(ann)) {
+				// annotation is in visible lines
+				annotationsToRedraw.add(ann);
 			}
 			ann.update(minings, monitor);
-			if (isInVisibleLines(ann)) {
-				if (exists) {
-					existingAnnotations.add(ann);
-				}
-				// Collect minings to resolve
-				for (ICodeMining mining : minings) {
-					// check if request was canceled.
-					monitor.isCanceled();
-					// try to resolve the mining in a future.
-					mining.resolve(viewer, monitor);
-				}
-			}
 			currentAnnotations.add(ann);
 		});
 		// check if request was canceled.
 		monitor.isCanceled();
 		fInlinedAnnotationSupport.updateAnnotations(currentAnnotations);
-		existingAnnotations.stream().forEach(ann -> ann.redraw());
-	}
-
-	private boolean isInVisibleLines(CodeMiningAnnotation ann) {
-		return ann.getPosition().getOffset() >= start && ann.getPosition().getOffset() <= end;
-	}
-
-	@Override
-	public void viewportChanged(int verticalOffset) {
-		start= getInclusiveTopIndexStartOffset();
-		end= getExclusiveBottomIndexEndOffset();
-	}
-
-	/**
-	 * Returns the document offset of the upper left corner of the source viewer's view port,
-	 * possibly including partially visible lines.
-	 *
-	 * @return the document offset if the upper left corner of the view port
-	 */
-	private int getInclusiveTopIndexStartOffset() {
-		if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
-			int top= JFaceTextUtil.getPartialTopIndex(fViewer);
-			try {
-				IDocument document= fViewer.getDocument();
-				return document.getLineOffset(top);
-			} catch (BadLocationException x) {
-			}
-		}
-
-		return -1;
-	}
-
-	/**
-	 * Returns the first invisible document offset of the lower right corner of the source viewer's
-	 * view port, possibly including partially visible lines.
-	 *
-	 * @return the first invisible document offset of the lower right corner of the view port
-	 */
-	private int getExclusiveBottomIndexEndOffset() {
-		if (fViewer != null && fViewer.getTextWidget() != null && !fViewer.getTextWidget().isDisposed()) {
-			int bottom= JFaceTextUtil.getPartialBottomIndex(fViewer);
-			try {
-				IDocument document= fViewer.getDocument();
-
-				if (bottom >= document.getNumberOfLines())
-					bottom= document.getNumberOfLines() - 1;
-
-				return document.getLineOffset(bottom) + document.getLineLength(bottom);
-			} catch (BadLocationException x) {
-			}
-		}
-
-		return -1;
+		// redraw the existing codemining annotations since their content can change
+		annotationsToRedraw.stream().forEach(ann -> ann.redraw());
 	}
 
 }

@@ -36,17 +36,17 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 
 	private final List<ICodeMining> fMinings;
 
-	private ITextViewer viewer;
+	private ITextViewer fViewer;
 
 	public CodeMiningAnnotation(Position position, ISourceViewer viewer) {
 		super(position, viewer.getTextWidget());
 		fMinings= new ArrayList<>();
-		this.viewer= viewer;
+		this.fViewer= viewer;
 	}
 
 	public void update(List<ICodeMining> minings, IProgressMonitor monitor) {
 		disposeMinings();
-		minings.stream().forEach(m -> m.setMonitor(monitor));
+		minings.stream().forEach(m -> m.setProgressMonitor(monitor));
 		fMinings.addAll(minings);
 	}
 
@@ -74,7 +74,7 @@ public class CodeMiningAnnotation extends LineHeaderAnnotation {
 			if (!mining.isResolved()) {
 				// Don't draw mining which is not resolved
 				// then redraw the annotation when mining is ready.
-				mining.resolve(viewer, null).thenRun(() -> this.redraw());
+				mining.resolve(fViewer).thenRun(() -> this.redraw());
 				continue;
 			}
 			if (nbDraw > 0) {
