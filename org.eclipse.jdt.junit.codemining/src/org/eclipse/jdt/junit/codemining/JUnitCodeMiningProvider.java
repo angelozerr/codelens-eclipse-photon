@@ -1,27 +1,87 @@
 package org.eclipse.jdt.junit.codemining;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeRoot;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.internal.ui.javaeditor.EditorUtility;
+import org.eclipse.jdt.junit.JUnitCore;
+import org.eclipse.jdt.junit.TestRunListener;
+import org.eclipse.jdt.junit.model.ITestCaseElement;
+import org.eclipse.jdt.junit.model.ITestRunSession;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.codemining.AbstractCodeMiningProvider;
 import org.eclipse.jface.text.codemining.ICodeMining;
+import org.eclipse.jface.text.source.ISourceViewerExtension5;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 
+	class CodeMiningTestRunListener extends TestRunListener {
+
+		private Map<IJavaProject, Map<String, ITestCaseElement>> projects;
+
+		public CodeMiningTestRunListener() {
+			projects = new HashMap<>();
+		}
+
+		@Override
+		public void testCaseFinished(ITestCaseElement testCaseElement) {
+			super.testCaseFinished(testCaseElement);
+			IJavaProject project = testCaseElement.getTestRunSession().getLaunchedProject();
+			String className = testCaseElement.getTestClassName();
+			String methodName = testCaseElement.getTestMethodName();
+
+			Map<String, ITestCaseElement> tests = projects.get(project);
+			if (tests == null) {
+				tests = new HashMap<>();
+				projects.put(project, tests);
+			}
+			String key = className + "#" + methodName;
+			tests.put(key, testCaseElement);
+		}
+		
+		@Override
+		public void sessionFinished(ITestRunSession session) {
+			super.sessionFinished(session);
+			((ISourceViewerExtension5)viewer).updateCodeMinings();
+		}
+
+		public ITestCaseElement findTestCase(IMethod method) {
+			IJavaProject project = method.getJavaProject();
+			String className = method.getDeclaringType().getElementName();
+			String methodName = method.getElementName();
+			String key = className + "#" + methodName;
+			Map<String, ITestCaseElement> tests = projects.get(project);
+			if (tests == null) {
+				return null;
+			}
+			return tests.get(key);
+		}
+	}
+
+	private final CodeMiningTestRunListener junitListener;
+	private ITextViewer viewer;
+
+	public JUnitCodeMiningProvider() {
+		junitListener = new CodeMiningTestRunListener();
+		JUnitCore.addTestRunListener(junitListener);
+	}
+
 	@Override
 	public CompletableFuture<List<? extends ICodeMining>> provideCodeMinings(ITextViewer viewer,
 			IProgressMonitor monitor) {
+		this.viewer = viewer;
 		return CompletableFuture.supplyAsync(() -> {
 			monitor.isCanceled();
 			ITextEditor textEditor = super.getAdapter(ITextEditor.class);
@@ -53,29 +113,34 @@ public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 					collectCodeMinings(unit, ((IType) element).getChildren(), minings, viewer, monitor);
 				} else if (element.getElementType() == IJavaElement.METHOD) {
 					IMethod method = (IMethod) element;
-					if (isTestMethod(method, "org.junit.Test")) {
-						minings.add(new JUnitCodeMining(element, viewer.getDocument(), this));
+					if (isTestMethod(method, "org.junit.Test") || isTestMethod(method, "Test")) {
+						minings.add(new JUnitCodeMining(method, junitListener, viewer.getDocument(), this));						
 					}
-						//&& CoreTestSearchEngine.isTestOrTestSuite((((IMethod) element).getDeclaringType()))) {
-					//IMethod type = ((IMethod) element;
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
-	
-	
+
 	public static boolean isTestMethod(IMethod method, String annotation) {
 		int flags;
 		try {
 			flags = method.getFlags();
 			// 'V' is void signature
-			return !(method.isConstructor() || !Flags.isPublic(flags) || Flags.isAbstract(flags) || Flags.isStatic(flags) || !"V".equals(method.getReturnType())) && method.getAnnotation(annotation).exists();
+			return !(method.isConstructor() || !Flags.isPublic(flags) || Flags.isAbstract(flags)
+					|| Flags.isStatic(flags) || !"V".equals(method.getReturnType()))
+					&& method.getAnnotation(annotation).exists();
 		} catch (JavaModelException e) {
 			// ignore
 			return false;
 		}
+	}
+
+	@Override
+	public void dispose() {
+		super.dispose();
+		JUnitCore.removeTestRunListener(junitListener);
 	}
 
 }

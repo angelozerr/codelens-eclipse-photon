@@ -13,13 +13,22 @@ package org.eclipse.jdt.junit.codemining;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jdt.core.IJavaElement;
-import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.internal.junit.model.TestCaseElement;
+import org.eclipse.jdt.internal.junit.model.TestElement.Status;
+import org.eclipse.jdt.internal.junit.ui.JUnitPlugin;
+import org.eclipse.jdt.junit.codemining.JUnitCodeMiningProvider.CodeMiningTestRunListener;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.codemining.ICodeMiningProvider;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 
 /**
  * Java implementation code mining.
@@ -28,17 +37,68 @@ import org.eclipse.jface.text.codemining.ICodeMiningProvider;
  */
 public class JUnitCodeMining extends AbstractJavaCodeMining {
 
-	public JUnitCodeMining(IJavaElement element, IDocument document, ICodeMiningProvider provider)
-			throws JavaModelException, BadLocationException {
+	final static Image fTestIcon;
+	final static Image fTestOkIcon;
+	final static Image fTestErrorIcon;
+	final static Image fTestFailIcon;
+	final static Image fTestRunningIcon;
+	final static Image fTestIgnoredIcon;
+	final static Image fTestAssumptionFailureIcon;
+
+	static {
+		fTestIcon = createManagedImage("obj16/test.png"); //$NON-NLS-1$
+		fTestOkIcon = createManagedImage("obj16/testok.png"); //$NON-NLS-1$
+		fTestErrorIcon = createManagedImage("obj16/testerr.png"); //$NON-NLS-1$
+		fTestFailIcon = createManagedImage("obj16/testfail.png"); //$NON-NLS-1$
+		fTestRunningIcon = createManagedImage("obj16/testrun.png"); //$NON-NLS-1$
+		fTestIgnoredIcon = createManagedImage("obj16/testignored.png"); //$NON-NLS-1$
+		fTestAssumptionFailureIcon = createManagedImage("obj16/testassumptionfailed.png"); //$NON-NLS-1$
+
+	}
+
+	private final CodeMiningTestRunListener testRegistry;
+	private TestCaseElement testCaseElement;
+
+	public JUnitCodeMining(IMethod element, CodeMiningTestRunListener testRegistry, IDocument document,
+			ICodeMiningProvider provider) throws JavaModelException, BadLocationException {
 		super(element, document, provider);
+		this.testRegistry = testRegistry;
+	}
+
+	private static Image createManagedImage(String path) {
+		return JUnitPlugin.getImageDescriptor(path).createImage();
 	}
 
 	@Override
 	protected CompletableFuture<Void> doResolve(ITextViewer viewer, IProgressMonitor monitor) {
 		return CompletableFuture.runAsync(() -> {
-			super.setLabel("TODO!!!");
-
+			this.testCaseElement = (TestCaseElement) testRegistry.findTestCase((IMethod) getElement());
 		});
 	}
 
+	@Override
+	public Point draw(GC gc, StyledText textWidget, Color color, int x, int y) {
+		Image image = getImage();
+		gc.drawImage(image, x, y + gc.getFontMetrics().getDescent());
+		Rectangle bounds = image.getBounds();
+		return new Point(bounds.width, bounds.height);
+	}
+
+	private Image getImage() {
+		if (testCaseElement == null) {
+			return fTestIcon;
+		}
+		Status status = testCaseElement.getStatus();
+		if (status.isNotRun())
+			return fTestIcon;
+		else if (status.isRunning())
+			return fTestRunningIcon;
+		else if (status.isError())
+			return fTestErrorIcon;
+		else if (status.isFailure())
+			return fTestFailIcon;
+		else if (status.isOK())
+			return fTestOkIcon;
+		return null;
+	}
 }
