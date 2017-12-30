@@ -35,7 +35,7 @@ import org.eclipse.swt.graphics.Rectangle;
  * 
  * @since 3.14
  */
-public class JUnitCodeMining extends AbstractJavaCodeMining {
+public class JUnitStatusCodeMining extends AbstractJavaCodeMining {
 
 	final static Image fTestIcon;
 	final static Image fTestOkIcon;
@@ -59,7 +59,7 @@ public class JUnitCodeMining extends AbstractJavaCodeMining {
 	private final CodeMiningTestRunListener testRegistry;
 	private TestCaseElement testCaseElement;
 
-	public JUnitCodeMining(IMethod element, CodeMiningTestRunListener testRegistry, IDocument document,
+	public JUnitStatusCodeMining(IMethod element, CodeMiningTestRunListener testRegistry, IDocument document,
 			ICodeMiningProvider provider) throws JavaModelException, BadLocationException {
 		super(element, document, provider);
 		this.testRegistry = testRegistry;

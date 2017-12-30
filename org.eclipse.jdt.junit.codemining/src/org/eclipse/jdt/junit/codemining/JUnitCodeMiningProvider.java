@@ -114,7 +114,9 @@ public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 				} else if (element.getElementType() == IJavaElement.METHOD) {
 					IMethod method = (IMethod) element;
 					if (isTestMethod(method, "org.junit.Test") || isTestMethod(method, "Test")) {
-						minings.add(new JUnitCodeMining(method, junitListener, viewer.getDocument(), this));						
+						minings.add(new JUnitStatusCodeMining(method, junitListener, viewer.getDocument(), this));						
+						minings.add(new JUnitLaunchCodeMining(method, viewer.getTextWidget(), "Run", "run", viewer.getDocument(), this));
+						minings.add(new JUnitLaunchCodeMining(method, viewer.getTextWidget(), "Debug", "debug", viewer.getDocument(), this));
 					}
 				}
 			} catch (Exception e) {
