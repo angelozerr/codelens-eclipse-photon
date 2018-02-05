@@ -50,11 +50,11 @@ public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 			String key = className + "#" + methodName;
 			tests.put(key, testCaseElement);
 		}
-		
+
 		@Override
 		public void sessionFinished(ITestRunSession session) {
 			super.sessionFinished(session);
-			((ISourceViewerExtension5)viewer).updateCodeMinings();
+			((ISourceViewerExtension5) viewer).updateCodeMinings();
 		}
 
 		public ITestCaseElement findTestCase(IMethod method) {
@@ -76,6 +76,19 @@ public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 	public JUnitCodeMiningProvider() {
 		junitListener = new CodeMiningTestRunListener();
 		JUnitCore.addTestRunListener(junitListener);
+	}
+
+
+	private boolean isStatusCodeMiningsEnabled() {
+		return true;
+	}
+
+	private boolean isRunCodeMiningsEnabled() {
+		return true;
+	}
+
+	private boolean isDebugCodeMiningsEnabled() {
+		return true;
 	}
 
 	@Override
@@ -114,9 +127,13 @@ public class JUnitCodeMiningProvider extends AbstractCodeMiningProvider {
 				} else if (element.getElementType() == IJavaElement.METHOD) {
 					IMethod method = (IMethod) element;
 					if (isTestMethod(method, "org.junit.Test") || isTestMethod(method, "Test")) {
-						minings.add(new JUnitStatusCodeMining(method, junitListener, viewer.getDocument(), this));						
-						minings.add(new JUnitLaunchCodeMining(method, viewer.getTextWidget(), "Run", "run", viewer.getDocument(), this));
-						minings.add(new JUnitLaunchCodeMining(method, viewer.getTextWidget(), "Debug", "debug", viewer.getDocument(), this));
+						if (isStatusCodeMiningsEnabled())
+							minings.add(new JUnitStatusCodeMining(method, junitListener, viewer.getDocument(), this));
+						if (isRunCodeMiningsEnabled())
+							minings.add(new JUnitLaunchCodeMining(method, "Run", "run", viewer.getDocument(), this));
+						if (isDebugCodeMiningsEnabled())
+							minings.add(
+									new JUnitLaunchCodeMining(method, "Debug", "debug", viewer.getDocument(), this));
 					}
 				}
 			} catch (Exception e) {

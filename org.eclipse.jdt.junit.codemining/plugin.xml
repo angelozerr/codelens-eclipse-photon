@@ -7,6 +7,18 @@
          class="org.eclipse.jdt.junit.codemining.JUnitCodeMiningProvider"
          id="org.eclipse.jdt.junit.codemining"
          label="%JUnitCodeMiningProvider.label">
+         <configuration
+           id="status"
+           label="Show Status">
+         </configuration>
+         <configuration
+           id="run"
+           label="Show Run">
+         </configuration>
+         <configuration
+           id="debug"
+           label="Show Debug">
+         </configuration>
          <enabledWhen>
             <with variable="editorInput">
                <adapt type="org.eclipse.core.resources.IFile">

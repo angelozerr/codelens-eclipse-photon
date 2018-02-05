@@ -10,32 +10,36 @@
  */
 package org.eclipse.jdt.junit.codemining;
 
-import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.codemining.AbstractCodeMining;
-import org.eclipse.jface.text.codemining.ICodeMiningProvider;
+import java.util.function.Consumer;
 
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.ISourceRange;
 import org.eclipse.jdt.core.ISourceReference;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.codemining.ICodeMiningProvider;
+import org.eclipse.jface.text.codemining.LineHeaderCodeMining;
+import org.eclipse.swt.events.MouseEvent;
 
 /**
  * Abstract class for Java code mining.
  *
  */
-public abstract class AbstractJavaCodeMining extends AbstractCodeMining {
+public abstract class AbstractJavaCodeMining extends LineHeaderCodeMining {
 
 	private final IJavaElement element;
 
-	public AbstractJavaCodeMining(IJavaElement element, IDocument document, ICodeMiningProvider provider) throws JavaModelException, BadLocationException {
-		super(getLineNumber(element, document), document, provider);
-		this.element= element;
+	public AbstractJavaCodeMining(IJavaElement element, IDocument document, ICodeMiningProvider provider,
+			Consumer<MouseEvent> action) throws JavaModelException, BadLocationException {
+		super(getLineNumber(element, document), document, provider, action);
+		this.element = element;
 	}
 
-	private static int getLineNumber(IJavaElement element, IDocument document) throws JavaModelException, BadLocationException {
-		ISourceRange r= ((ISourceReference) element).getNameRange();
-		int offset= r.getOffset();
+	private static int getLineNumber(IJavaElement element, IDocument document)
+			throws JavaModelException, BadLocationException {
+		ISourceRange r = ((ISourceReference) element).getNameRange();
+		int offset = r.getOffset();
 		return document.getLineOfOffset(offset);
 	}
 

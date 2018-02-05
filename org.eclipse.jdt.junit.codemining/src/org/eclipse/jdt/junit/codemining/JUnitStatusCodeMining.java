@@ -61,7 +61,7 @@ public class JUnitStatusCodeMining extends AbstractJavaCodeMining {
 
 	public JUnitStatusCodeMining(IMethod element, CodeMiningTestRunListener testRegistry, IDocument document,
 			ICodeMiningProvider provider) throws JavaModelException, BadLocationException {
-		super(element, document, provider);
+		super(element, document, provider, null);
 		this.testRegistry = testRegistry;
 	}
 
